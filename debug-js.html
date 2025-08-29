@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Test ładowania JavaScript</h1>
+    <div id="debug-info"></div>
+    
+    <script src="http://localhost/wordpress/wp-content/themes/krystian_k_sklep/assets/js/instant-login-fix-new-ajax.js"></script>
+    <script>
+        document.getElementById('debug-info').innerHTML = 
+            '<p>Czy window.preomar_login_debug istnieje: ' + 
+            (typeof window.preomar_login_debug !== 'undefined' ? 'TAK' : 'NIE') + '</p>';
+    </script>
+</body>
+</html>

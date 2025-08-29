@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test AJAX Logowania - Krystian_K Sklep</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #007cba;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #005a87;
+        }
+        .console-output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test AJAX Logowania - Krystian_K Sklep</h1>
+        <p><strong>Data testu:</strong> <span id="test-date"></span></p>
+        
+        <div class="test-section">
+            <h3>📋 Informacje o środowisku</h3>
+            <div id="environment-info"></div>
+            <button onclick="checkEnvironment()">🔍 Sprawdź środowisko</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 Test URL-i WordPress</h3>
+            <div id="url-info"></div>
+            <button onclick="checkUrls()">🌐 Sprawdź URL-e</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📜 Test ładowania JavaScript</h3>
+            <div id="js-info"></div>
+            <button onclick="checkJavaScript()">⚙️ Sprawdź JS</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Test AJAX endpoints</h3>
+            <div id="ajax-info"></div>
+            <button onclick="testAjaxEndpoints()">🚀 Test AJAX</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📺 Console Log</h3>
+            <div id="console-log" class="console-output"></div>
+            <button onclick="clearConsole()">🗑️ Wyczyść</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔗 Linki testowe</h3>
+            <p><a href="http://localhost/wordpress/my-account/" target="_blank" style="color: #007cba;">🏪 Strona My Account</a></p>
+            <p><a href="http://localhost/wordpress/my-account/?action=register" target="_blank" style="color: #007cba;">📝 Rejestracja</a></p>
+            <p><a href="http://localhost/wordpress/my-account/?action=lostpassword" target="_blank" style="color: #007cba;">🔐 Reset hasła</a></p>
+            <p><a href="http://localhost/wordpress/wp-admin/themes.php" target="_blank" style="color: #007cba;">⚙️ Panel tematów WP</a></p>
+        </div>
+    </div>
+
+    <script>
+        // Przechwytuj console.log
+        let consoleOutput = [];
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleOutput.push(new Date().toLocaleTimeString() + ': ' + args.join(' '));
+            updateConsoleOutput();
+        };
+
+        function updateConsoleOutput() {
+            const consoleDiv = document.getElementById('console-log');
+            consoleDiv.innerHTML = consoleOutput.slice(-20).join('<br>'); // Ostatnie 20 wpisów
+        }
+
+        function clearConsole() {
+            consoleOutput = [];
+            updateConsoleOutput();
+        }
+
+        // Ustaw datę testu
+        document.getElementById('test-date').textContent = new Date().toLocaleString();
+
+        function checkEnvironment() {
+            const info = document.getElementById('environment-info');
+            info.innerHTML = `
+                <div class="info">
+                    <strong>🌐 URL:</strong> ${window.location.href}<br>
+                    <strong>🔧 User Agent:</strong> ${navigator.userAgent}<br>
+                    <strong>📱 Screen:</strong> ${screen.width}x${screen.height}<br>
+                    <strong>🖥️ Viewport:</strong> ${window.innerWidth}x${window.innerHeight}<br>
+                    <strong>⏰ Timezone:</strong> ${Intl.DateTimeFormat().resolvedOptions().timeZone}
+                </div>
+            `;
+        }
+
+        function checkUrls() {
+            const info = document.getElementById('url-info');
+            
+            // Sprawdź czy są dostępne zmienne WordPress
+            if (typeof preomar_login_vars !== 'undefined') {
+                info.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>Zmienne WordPress znalezione!</strong><br>
+                        <strong>Site URL:</strong> ${preomar_login_vars.site_url}<br>
+                        <strong>Home URL:</strong> ${preomar_login_vars.home_url}<br>
+                        <strong>Account URL:</strong> ${preomar_login_vars.account_url}<br>
+                        <strong>AJAX URL:</strong> ${preomar_login_vars.ajax_url}<br>
+                        <strong>Nonce:</strong> ${preomar_login_vars.nonce ? '✅ Obecny' : '❌ Brak'}<br>
+                        <strong>Registration:</strong> ${preomar_login_vars.registration_enabled}
+                    </div>
+                `;
+            } else {
+                info.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>Zmienne WordPress nie zostały znalezione!</strong><br>
+                        Sprawdź czy plik JS został poprawnie załadowany przez WordPress.
+                    </div>
+                `;
+            }
+        }
+
+        function checkJavaScript() {
+            const info = document.getElementById('js-info');
+            let jsStatus = [];
+            
+            // Sprawdź czy jQuery jest dostępne
+            if (typeof jQuery !== 'undefined') {
+                jsStatus.push('✅ jQuery: v' + jQuery.fn.jquery);
+            } else {
+                jsStatus.push('❌ jQuery: Nie znaleziono');
+            }
+            
+            // Sprawdź czy funkcje logowania są dostępne
+            if (typeof showLoginForm !== 'undefined') {
+                jsStatus.push('✅ showLoginForm: Dostępna');
+            } else {
+                jsStatus.push('❌ showLoginForm: Nie znaleziona');
+            }
+            
+            if (typeof showRegistrationForm !== 'undefined') {
+                jsStatus.push('✅ showRegistrationForm: Dostępna');
+            } else {
+                jsStatus.push('❌ showRegistrationForm: Nie znaleziona');
+            }
+            
+            if (typeof showLostPasswordForm !== 'undefined') {
+                jsStatus.push('✅ showLostPasswordForm: Dostępna');
+            } else {
+                jsStatus.push('❌ showLostPasswordForm: Nie znaleziona');
+            }
+            
+            info.innerHTML = `
+                <div class="${jsStatus.some(s => s.includes('❌')) ? 'error' : 'success'}">
+                    ${jsStatus.join('<br>')}
+                </div>
+            `;
+        }
+
+        function testAjaxEndpoints() {
+            const info = document.getElementById('ajax-info');
+            info.innerHTML = '<div class="info">🔄 Testowanie endpoints...</div>';
+            
+            if (typeof preomar_login_vars === 'undefined') {
+                info.innerHTML = '<div class="error">❌ Brak zmiennych WordPress! Nie można przeprowadzić testu AJAX.</div>';
+                return;
+            }
+            
+            // Test ping do AJAX endpoint
+            fetch(preomar_login_vars.ajax_url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=heartbeat&_nonce=' + preomar_login_vars.nonce
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text();
+                } else {
+                    throw new Error('HTTP ' + response.status);
+                }
+            })
+            .then(data => {
+                console.log('AJAX Response:', data);
+                info.innerHTML = `
+                    <div class="success">
+                        ✅ <strong>AJAX endpoint działa!</strong><br>
+                        Response size: ${data.length} bytes<br>
+                        Status: Połączenie nawiązane
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error('AJAX Error:', error);
+                info.innerHTML = `
+                    <div class="error">
+                        ❌ <strong>AJAX endpoint nie odpowiada!</strong><br>
+                        Error: ${error.message}<br>
+                        URL: ${preomar_login_vars.ajax_url}
+                    </div>
+                `;
+            });
+        }
+
+        // Uruchom podstawowe testy przy ładowaniu
+        window.onload = function() {
+            console.log('🚀 Rozpoczynam testy środowiska...');
+            setTimeout(checkEnvironment, 500);
+            setTimeout(checkUrls, 1000);
+            setTimeout(checkJavaScript, 1500);
+            console.log('✅ Testy środowiska zakończone');
+        };
+    </script>
+</body>
+</html>

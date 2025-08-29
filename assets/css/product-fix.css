@@ -1,0 +1,146 @@
+/* Stabilna siatka produktów – KAŻDA karta ma stałą / maksymalnie identyczną szerokość
+   niezależnie od liczby elementów paginacji pod spodem.
+   - Desktop: powtarzane kolumny o stałej szerokości 280px (możesz zmienić np. na 300px)
+   - Siatka owinięta i wycentrowana: nadmiarowa przestrzeń zostaje po bokach, karty się NIE rozciągają
+   - Mobile (<640px): jedna kolumna 100% szerokości (używamy minmax pełnej szerokości)
+*/
+.woocommerce ul.products,
+.shop-content ul.products {
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(280px,280px)) !important; /* stałe kafelki */
+  justify-content:center !important; /* centrowanie w wierszu gdy brak pełnej szerokości */
+  gap:32px 28px !important;
+  padding:0 !important;
+  list-style:none !important;
+  width:100% !important; /* wymuś pełną dostępną szerokość kontenera */
+  box-sizing:border-box !important;
+}
+.woocommerce ul.products > li.product,
+.shop-content ul.products > li.product {
+  margin:0 !important;
+  width:280px !important;          /* stała szerokość kafelka */
+  max-width:100% !important;
+  flex:none !important;            /* kasuj fallback flex */
+  grid-column:auto !important;     /* uniemozliw span=2 */
+  box-sizing:border-box !important;
+}
+/* USUN pusty pierwszy slot: WooCommerce dodaje clearfix ::before i ::after, ktore jako grid items zajmuja komorke */
+.woocommerce ul.products::before,
+.woocommerce ul.products::after,
+.shop-content ul.products::before,
+.shop-content ul.products::after {
+  content:none !important;
+  display:none !important;
+}
+/* Nadpisz potencjalne klasowe reguly WooCommerce typu columns-x */
+.woocommerce ul.products[class*="columns-"] > li.product { width:auto !important; }
+/* Placeholder / puste elementy (na wszelki wypadek) */
+.woocommerce ul.products li.product:empty,
+.woocommerce ul.products li.product.placeholder,
+.woocommerce ul.products li.product[class*="placeholder"],
+.woocommerce ul.products li.product.temp-hidden { display:none !important; }
+/* Mobile: 1 kolumna – karty na pełną szerokość ekranu */
+@media (max-width:640px){
+  .woocommerce ul.products, .shop-content ul.products { grid-template-columns:repeat(auto-fit,minmax(100%,1fr)) !important; justify-content:stretch !important; }
+  .woocommerce ul.products > li.product, .shop-content ul.products > li.product { width:100% !important; }
+}
+
+/* Skracanie dlugich nazw produktu z wielokropkiem */
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display:block; /* pewnosc ze ellipsis dziala */
+  width:100%;
+}
+/* (Opcjonalnie dla 2 linii zamiast jednej – odkomentuj) */
+/*
+.woocommerce ul.products li.product .woocommerce-loop-product__title.two-lines {
+  white-space: initial;
+  display:-webkit-box;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
+*/
+
+/* Usuniecie ikonek wishlist / porownanie w kartach produktu */
+.woocommerce ul.products li.product .yith-wcwl-add-to-wishlist,
+.woocommerce ul.products li.product .yith-wcwl-add-to-wishlist * ,
+.woocommerce ul.products li.product a.compare,
+.woocommerce ul.products li.product .compare,
+.woocommerce ul.products li.product .tinvwl_add_to_wishlist_button,
+.woocommerce ul.products li.product .woosw-btn,
+.woocommerce ul.products li.product .woosc-btn,
+.woocommerce ul.products li.product .wpc-smart-compare,
+.woocommerce ul.products li.product .wpc-smart-compare-btn {
+  display:none !important;
+}
+/* Ukryj tytuł strony sklepu (nagłówek H1 "Sklep") */
+body.post-type-archive-product h1.page-title,
+body.tax-product_cat h1.page-title,
+body.tax-product_tag h1.page-title,
+body.archive.woocommerce h1.page-title {
+  display:none !important;
+}
+/* Dodatkowe ukrycie (serce / waga) – fallback na inne pluginy */
+.woocommerce ul.products li.product a[class*="wish"],
+.woocommerce ul.products li.product button[class*="wish"],
+.woocommerce ul.products li.product span[class*="wish"],
+.woocommerce ul.products li.product a[class*="compare"],
+.woocommerce ul.products li.product button[class*="compare"],
+.woocommerce ul.products li.product span[class*="compare"],
+.woocommerce ul.products li.product .tinvwl-loop-button-wrapper,
+.woocommerce ul.products li.product .tinvwl_add_to_wishlist_button,
+.woocommerce ul.products li.product .tinvwl_add_to_wishlist,
+.woocommerce ul.products li.product .woosw-btn,
+.woocommerce ul.products li.product .woosc-btn,
+.woocommerce ul.products li.product .wpc-smart-wishlist,
+.woocommerce ul.products li.product .wpc-smart-compare,
+.woocommerce ul.products li.product .yith-wcwl-add-to-wishlist,
+.woocommerce ul.products li.product .yith-wcwl-wishlistaddedbrowse,
+.woocommerce ul.products li.product .yith-wcwl-wishlistexistsbrowse {
+  display:none !important;
+}
+
+/* Przywracamy własny licznik i select – odblokuj wcześniejsze ukrywanie */
+.woocommerce-result-count, .woocommerce-ordering { display:initial !important; }
+/* Wyrównanie toolbaru (lewy licznik, prawy select) */
+.shop-toolbar { display:flex; justify-content:space-between; align-items:center; gap:24px; }
+.shop-toolbar .results-count { font-size:14px; color:#444; }
+.shop-toolbar .custom-sorting-right select { padding:6px 10px; }
+
+/* === CENTROWANIE PAGINACJI POD SIATKĄ PRODUKTÓW === */
+/* Główny kontener treści sklepu – stała szerokość kolumny produktów (zmień 960px wg potrzeb) */
+body.archive.post-type-archive-product main.shop-content,
+body.tax-product_cat main.shop-content,
+body.woocommerce-shop main.shop-content,
+body.search-results main.shop-content {
+  max-width:960px !important; /* stała szerokość listy produktów */
+  width:960px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  box-sizing:border-box !important;
+}
+/* Jeśli struktura ma wrapper .shop-container obok sidebaru – ogranicz tylko kolumnę główną */
+body.archive.post-type-archive-product .shop-container,
+body.tax-product_cat .shop-container,
+body.woocommerce-shop .shop-container,
+body.search-results .shop-container { align-items:stretch; }
+
+body.post-type-archive-product .woocommerce nav.woocommerce-pagination,
+body.tax-product_cat .woocommerce nav.woocommerce-pagination,
+body.woocommerce-shop .woocommerce nav.woocommerce-pagination,
+body.search-results .woocommerce nav.woocommerce-pagination {
+  width:auto !important;            /* szerokość tylko tyle co numery stron */
+  max-width:none !important;
+  display:inline-flex !important;   /* shrink-to-content + flex-wrap */
+  flex-wrap:wrap !important;
+  justify-content:center !important;
+  margin:40px auto 0 !important;    /* centrowanie względem nowego 960px */
+  padding:0 !important;
+}
+body .woocommerce nav.woocommerce-pagination ul {
+  justify-content:center !important;
+  margin:0 !important;
+}

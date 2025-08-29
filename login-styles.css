@@ -1,0 +1,401 @@
+/* ================================================
+   ENHANCED LOGIN FORM STYLES
+   ================================================ */
+
+/* Custom Login Container */
+.custom-login-container {
+    background: var(--white);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(30, 58, 138, 0.15);
+    border: 1px solid #e5e7eb;
+    max-width: 450px;
+    margin: 0 auto;
+    position: relative;
+}
+
+.custom-login-container::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color), #2563eb);
+    background-size: 200% 100%;
+    animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+/* Login Header Section */
+.login-header-section {
+    text-align: center;
+    padding: 40px 35px 30px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.login-icon {
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 20px;
+    background: linear-gradient(135deg, var(--primary-color), #2563eb);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    box-shadow: 0 10px 30px rgba(30, 58, 138, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.login-icon::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(45deg, transparent, rgba(255,255,255,0.3), transparent);
+    animation: iconShine 2s infinite;
+}
+
+@keyframes iconShine {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.login-welcome {
+    color: var(--primary-color);
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 0 0 8px;
+    letter-spacing: -0.5px;
+}
+
+.login-subtitle {
+    color: #64748b;
+    font-size: 14px;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Enhanced Form Styling */
+.custom-login-container .woocommerce-form-login {
+    padding: 35px;
+    background: none;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    margin: 0;
+}
+
+/* Input Wrappers with Icons */
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-icon {
+    position: absolute;
+    left: 16px;
+    color: #94a3b8;
+    pointer-events: none;
+    z-index: 2;
+    transition: color 0.3s ease;
+}
+
+.input-wrapper:focus-within .input-icon {
+    color: var(--primary-color);
+}
+
+/* Enhanced Input Fields */
+.custom-login-container input[type="text"],
+.custom-login-container input[type="email"],
+.custom-login-container input[type="password"] {
+    width: 100%;
+    padding: 16px 20px 16px 50px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 15px;
+    background: #f8fafc;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.custom-login-container input[type="text"]:focus,
+.custom-login-container input[type="email"]:focus,
+.custom-login-container input[type="password"]:focus {
+    border-color: var(--primary-color);
+    background: var(--white);
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(30, 58, 138, 0.1);
+    transform: translateY(-1px);
+}
+
+/* Password Toggle Button */
+.password-wrapper {
+    position: relative;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    z-index: 3;
+}
+
+.password-toggle:hover {
+    color: var(--primary-color);
+    background: rgba(30, 58, 138, 0.1);
+}
+
+/* Enhanced Login Button */
+.custom-login-container .woocommerce-button {
+    background: linear-gradient(135deg, var(--primary-color), #2563eb);
+    color: var(--white);
+    border: none;
+    padding: 18px 32px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    width: 100%;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+    margin: 25px 0 20px;
+    box-shadow: 0 8px 25px rgba(30, 58, 138, 0.25);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.custom-login-container .woocommerce-button::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: left 0.6s ease;
+}
+
+.custom-login-container .woocommerce-button:hover::before {
+    left: 100%;
+}
+
+.custom-login-container .woocommerce-button:hover {
+    background: linear-gradient(135deg, #1e40af, #1d4ed8);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 35px rgba(30, 58, 138, 0.35);
+}
+
+.button-icon {
+    transition: transform 0.3s ease;
+}
+
+.custom-login-container .woocommerce-button:hover .button-icon {
+    transform: translateX(3px);
+}
+
+/* Enhanced Checkbox */
+.custom-login-container .woocommerce-form__label-for-checkbox {
+    display: flex;
+    align-items: center;
+    margin: 20px 0;
+    font-size: 14px;
+    color: #475569;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.custom-login-container input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+/* Lost Password Link */
+.custom-login-container .lost_password {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.custom-login-container .lost_password a {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.custom-login-container .lost_password a::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 0;
+    height: 2px;
+    background: var(--accent-color);
+    transition: width 0.3s ease;
+}
+
+.custom-login-container .lost_password a:hover::after {
+    width: 100%;
+}
+
+.custom-login-container .lost_password a:hover {
+    color: #e55a00;
+    transform: translateY(-1px);
+}
+
+/* Login Benefits Section */
+.login-benefits {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 30px 35px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.login-benefits h3 {
+    color: var(--primary-color);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 15px;
+    text-align: center;
+}
+
+.login-benefits ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.login-benefits li {
+    display: flex;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 13px;
+    color: #475569;
+    font-weight: 500;
+}
+
+.login-benefits li svg {
+    color: #22c55e;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+/* Form Labels */
+.custom-login-container label {
+    color: var(--primary-color);
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: block;
+    font-size: 14px;
+    letter-spacing: 0.2px;
+}
+
+.custom-login-container .required {
+    color: #ef4444;
+    margin-left: 3px;
+}
+
+/* Form Rows */
+.custom-login-container .woocommerce-form-row {
+    margin-bottom: 25px;
+}
+
+/* Error and Success Messages */
+.custom-login-container .woocommerce-error,
+.custom-login-container .woocommerce-message {
+    background: #fef2f2;
+    border: 2px solid #fca5a5;
+    color: #dc2626;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    font-size: 14px;
+    font-weight: 500;
+    position: relative;
+}
+
+.custom-login-container .woocommerce-message {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #16a34a;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .custom-login-container {
+        margin: 0 15px;
+        border-radius: 12px;
+    }
+    
+    .login-header-section {
+        padding: 30px 25px 20px;
+    }
+    
+    .login-icon {
+        width: 60px;
+        height: 60px;
+        margin-bottom: 15px;
+    }
+    
+    .login-welcome {
+        font-size: 1.5rem;
+    }
+    
+    .custom-login-container .woocommerce-form-login {
+        padding: 25px;
+    }
+    
+    .login-benefits {
+        padding: 20px 25px;
+    }
+    
+    .custom-login-container input[type="text"],
+    .custom-login-container input[type="email"],
+    .custom-login-container input[type="password"] {
+        padding: 14px 16px 14px 45px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+}
+
+@media (max-width: 480px) {
+    .custom-login-container {
+        margin: 0 10px;
+    }
+    
+    .login-welcome {
+        font-size: 1.3rem;
+    }
+    
+    .custom-login-container .woocommerce-form-login {
+        padding: 20px;
+    }
+}

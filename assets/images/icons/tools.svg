@@ -1,0 +1,15 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="64" height="64" rx="12" fill="#ff6900"/>
+  <g transform="translate(12, 12)">
+    <!-- Młotek -->
+    <path d="M8 16h16l4-4-4-4H8l-4 4 4 4z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M24 12h4v4h-4z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 16v16" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <!-- Klucz -->
+    <path d="M4 28h8l8-8-4-4-8 8v4z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="6" cy="30" r="1" fill="white"/>
+    <!-- Śrubokręt -->
+    <path d="M32 20v12h-2v-12h2z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <path d="M30 32h4l2 4h-8l2-4z" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>

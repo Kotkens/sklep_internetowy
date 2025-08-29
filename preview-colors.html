@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Podgląd Kolorystyki Formularzy - Krystian_K Sklep</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1E3A8A 0%, #1C1C4A 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .preview-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+        }
+        .color-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border-radius: 15px;
+            background: rgba(248, 250, 252, 0.5);
+        }
+        .color-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .form-preview {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .form-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 15px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .form-button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-size: 14px;
+        }
+        .login-theme .form-icon {
+            background: linear-gradient(135deg, #1E3A8A, #1C1C4A);
+        }
+        .login-theme .form-button {
+            background: linear-gradient(135deg, #1E3A8A, #1C1C4A);
+        }
+        .login-theme h3 {
+            color: #1E3A8A;
+        }
+        .register-theme .form-icon {
+            background: linear-gradient(135deg, #FF6B00, #1E3A8A);
+        }
+        .register-theme .form-button {
+            background: linear-gradient(135deg, #FF6B00, #1E3A8A);
+        }
+        .register-theme h3 {
+            color: #FF6B00;
+        }
+        .reset-theme .form-icon {
+            background: linear-gradient(135deg, #1C1C4A, #FF6B00);
+        }
+        .reset-theme .form-button {
+            background: linear-gradient(135deg, #1C1C4A, #FF6B00);
+        }
+        .reset-theme h3 {
+            color: #1C1C4A;
+        }
+        .color-swatch {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            margin: 0 5px;
+            vertical-align: middle;
+        }
+        .theme-colors {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="preview-container">
+        <h1 style="text-align: center; color: #1E3A8A; margin-bottom: 30px;">
+            🎨 Podgląd Kolorystyki Formularzy Logowania
+        </h1>
+        
+        <div class="theme-colors">
+            <h2 style="color: #333; margin-bottom: 15px;">🎯 Kolory Motywu Sklepu</h2>
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <span class="color-swatch" style="background: #1E3A8A;"></span>
+                    <strong>Primary:</strong> #1E3A8A
+                </div>
+                <div>
+                    <span class="color-swatch" style="background: #1C1C4A;"></span>
+                    <strong>Secondary:</strong> #1C1C4A
+                </div>
+                <div>
+                    <span class="color-swatch" style="background: #FF6B00;"></span>
+                    <strong>Accent:</strong> #FF6B00
+                </div>
+                <div>
+                    <span class="color-swatch" style="background: #333;"></span>
+                    <strong>Text:</strong> #333
+                </div>
+                <div>
+                    <span class="color-swatch" style="background: #f5f5f5;"></span>
+                    <strong>Light Gray:</strong> #f5f5f5
+                </div>
+            </div>
+        </div>
+        
+        <div class="color-section">
+            <h2 style="color: #333;">📋 Podgląd Formularzy</h2>
+            <div class="color-grid">
+                
+                <div class="form-preview login-theme">
+                    <div class="form-icon">👤</div>
+                    <h3>Formularz Logowania</h3>
+                    <p style="color: #666; margin: 10px 0;">Główne kolory: Primary + Secondary</p>
+                    <div>
+                        <div class="color-swatch" style="background: linear-gradient(135deg, #1E3A8A, #1C1C4A);"></div>
+                        <small>Gradient: #1E3A8A → #1C1C4A</small>
+                    </div>
+                    <button class="form-button">Zaloguj się</button>
+                    <br><small style="color: #666;">Focus: #1E3A8A</small>
+                </div>
+                
+                <div class="form-preview register-theme">
+                    <div class="form-icon">✨</div>
+                    <h3>Formularz Rejestracji</h3>
+                    <p style="color: #666; margin: 10px 0;">Główne kolory: Accent + Primary</p>
+                    <div>
+                        <div class="color-swatch" style="background: linear-gradient(135deg, #FF6B00, #1E3A8A);"></div>
+                        <small>Gradient: #FF6B00 → #1E3A8A</small>
+                    </div>
+                    <button class="form-button">Zarejestruj się</button>
+                    <br><small style="color: #666;">Focus: #FF6B00</small>
+                </div>
+                
+                <div class="form-preview reset-theme">
+                    <div class="form-icon">🔑</div>
+                    <h3>Reset Hasła</h3>
+                    <p style="color: #666; margin: 10px 0;">Główne kolory: Secondary + Accent</p>
+                    <div>
+                        <div class="color-swatch" style="background: linear-gradient(135deg, #1C1C4A, #FF6B00);"></div>
+                        <small>Gradient: #1C1C4A → #FF6B00</small>
+                    </div>
+                    <button class="form-button">Wyślij link</button>
+                    <br><small style="color: #666;">Focus: #1C1C4A</small>
+                </div>
+                
+            </div>
+        </div>
+        
+        <div class="color-section">
+            <h2 style="color: #333;">🌈 Tło Strony</h2>
+            <div style="
+                height: 100px; 
+                background: linear-gradient(135deg, #1E3A8A 0%, #1C1C4A 100%);
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: bold;
+                margin: 15px 0;
+            ">
+                Gradient tła: #1E3A8A → #1C1C4A
+            </div>
+            <p style="color: #666; text-align: center;">
+                Z dodatkowymi overlay'ami w kolorach motywu dla głębi
+            </p>
+        </div>
+        
+        <div style="text-align: center; margin-top: 30px; padding: 20px; background: #f8fafc; border-radius: 10px;">
+            <h3 style="color: #1E3A8A; margin-bottom: 15px;">✅ Zastosowane Zmiany</h3>
+            <ul style="text-align: left; max-width: 600px; margin: 0 auto; color: #666;">
+                <li><strong>Tło strony:</strong> Gradient Primary → Secondary</li>
+                <li><strong>Logowanie:</strong> Primary + Secondary kolory</li>
+                <li><strong>Rejestracja:</strong> Accent + Primary kolory</li>
+                <li><strong>Reset hasła:</strong> Secondary + Accent kolory</li>
+                <li><strong>Focus efekty:</strong> Dopasowane do każdego formularza</li>
+                <li><strong>Linki:</strong> Accent color (#FF6B00) dla "Nie pamiętasz hasła?"</li>
+            </ul>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="http://localhost/wordpress/my-account/" style="
+                background: linear-gradient(135deg, #1E3A8A, #1C1C4A);
+                color: white;
+                text-decoration: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-weight: 600;
+                display: inline-block;
+                margin: 5px;
+            ">🏪 Zobacz Formularz Logowania</a>
+            
+            <a href="http://localhost/wordpress/my-account/?action=register" style="
+                background: linear-gradient(135deg, #FF6B00, #1E3A8A);
+                color: white;
+                text-decoration: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-weight: 600;
+                display: inline-block;
+                margin: 5px;
+            ">📝 Zobacz Formularz Rejestracji</a>
+            
+            <a href="http://localhost/wordpress/my-account/?action=lostpassword" style="
+                background: linear-gradient(135deg, #1C1C4A, #FF6B00);
+                color: white;
+                text-decoration: none;
+                padding: 15px 30px;
+                border-radius: 10px;
+                font-weight: 600;
+                display: inline-block;
+                margin: 5px;
+            ">🔑 Zobacz Reset Hasła</a>
+        </div>
+    </div>
+</body>
+</html>
