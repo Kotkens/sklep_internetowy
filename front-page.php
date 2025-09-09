@@ -1,88 +1,11 @@
 <?php get_header(); ?>
 
 <main class="main-content">
-    <!-- Mała przestrzeń po headerze -->
-    <div style="height: 10px;"></div>
-    
-    <!-- Hero Slider w stylu Allegro -->
-    <section class="hero-slider">
-        <div class="slider-container">
-            <div class="slider-track" id="heroSlider">
-                <!-- Slide 1: Salon vintage -->
-                <div class="slide active">
-                    <div class="slide-split">
-                        <div class="slide-left" style="background: linear-gradient(135deg, #ff5722 0%, #e91e63 100%);">
-                            <div class="slide-content">
-                                <div class="promo-logo">
-                                    <span class="promo-text">PreoMarket</span>
-                                    <span class="days-badge">VINTAGE</span>
-                                </div>
-                                <div class="promo-text">
-                                    <h2>Stylowy <strong>salon vintage</strong><br>dla Twojego domu</h2>
-                                    <h3>do <span class="discount">-40%</span></h3>
-                                    <p class="promo-date">meble i akcesoria retro<br>w najlepszych cenach</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slide-right">
-                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/slider/salon-vintage.png" alt="Salon vintage" class="slide-image">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Slide 2: Odnowiony ogród -->
-                <div class="slide">
-                    <div class="slide-split">
-                        <div class="slide-left" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);">
-                            <div class="slide-content">
-                                <div class="promo-text">
-                                    <h2>Odnowiony <strong>ogród</strong><br>na nowy sezon</h2>
-                                    <h3>do <span class="discount">-30%</span></h3>
-                                    <p class="promo-category">narzędzia, meble ogrodowe<br>i rośliny w super cenach</p>
-                                    <a href="/kategoria/dom-ogrod" class="promo-btn">Zobacz oferty</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slide-right">
-                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/slider/ogrod-vintage.png" alt="Ogród vintage" class="slide-image">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Slide 3: Rowery vintage -->
-                <div class="slide">
-                    <div class="slide-split">
-                        <div class="slide-left" style="background: linear-gradient(135deg, #2196f3 0%, #1565c0 100%);">
-                            <div class="slide-content">
-                                <div class="promo-text">
-                                    <h2>Rowery <strong>vintage</strong><br>w stylu retro</h2>
-                                    <h3>do <span class="discount">-25%</span></h3>
-                                    <p class="promo-category">klasyczne rowery miejskie<br>i akcesoria w vintage stylu</p>
-                                    <a href="/kategoria/sport-turystyka" class="promo-btn">Znajdź swój rower</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="slide-right">
-                            <img src="<?php echo get_template_directory_uri(); ?>/assets/images/slider/rowery-vintage.jpg" alt="Rowery vintage" class="slide-image">
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Navigation dots -->
-            <div class="slider-dots">
-                <span class="dot active" onclick="currentSlide(1)"></span>
-                <span class="dot" onclick="currentSlide(2)"></span>
-                <span class="dot" onclick="currentSlide(3)"></span>
-            </div>
-            
-            <!-- Navigation arrows -->
-            <div class="slider-controls">
-                <button class="slider-btn prev" onclick="prevSlide()">❮</button>
-                <button class="slider-btn next" onclick="nextSlide()">❯</button>
-            </div>
-        </div>
-    </section>
+    <div style="height:10px"></div>
+    <?php
+    // Wstaw dynamiczny hero slider (template part) – zawiera fallback jeżeli brak slajdów
+    get_template_part('template-parts/hero/slider');
+    ?>
 
     <!-- Kategorie (dynamiczne) -->
     <section class="categories-section">
@@ -391,100 +314,13 @@
 </style>
 
 <script>
-// Slider functionality with smooth transitions
-let currentSlideIndex = 0;
-const slides = document.querySelectorAll('.slide');
-const dots = document.querySelectorAll('.dot');
-let isTransitioning = false;
-
-function showSlide(n) {
-    if (isTransitioning) return;
-    isTransitioning = true;
-    
-    slides[currentSlideIndex].classList.remove('active');
-    dots[currentSlideIndex].classList.remove('active');
-    
-    currentSlideIndex = (n + slides.length) % slides.length;
-    
-    slides[currentSlideIndex].classList.add('active');
-    dots[currentSlideIndex].classList.add('active');
-    
-    setTimeout(() => {
-        isTransitioning = false;
-    }, 800);
-}
-
-function nextSlide() {
-    showSlide(currentSlideIndex + 1);
-}
-
-function prevSlide() {
-    showSlide(currentSlideIndex - 1);
-}
-
-function currentSlide(n) {
-    showSlide(n - 1);
-}
-
-// Auto-advance slider
-let autoSlideInterval;
-
-function startAutoSlide() {
-    autoSlideInterval = setInterval(nextSlide, 5000);
-}
-
-function stopAutoSlide() {
-    clearInterval(autoSlideInterval);
-}
-
-startAutoSlide();
-
-const sliderContainer = document.querySelector('.slider-container');
-if (sliderContainer) {
-    sliderContainer.addEventListener('mouseenter', stopAutoSlide);
-    sliderContainer.addEventListener('mouseleave', startAutoSlide);
-}
-
-// Touch support
-let startX = 0;
-let endX = 0;
-
-sliderContainer.addEventListener('touchstart', (e) => {
-    startX = e.touches[0].clientX;
-});
-
-sliderContainer.addEventListener('touchmove', (e) => {
-    e.preventDefault();
-});
-
-sliderContainer.addEventListener('touchend', (e) => {
-    endX = e.changedTouches[0].clientX;
-    const threshold = 50;
-    
-    if (startX - endX > threshold) {
-        nextSlide();
-    } else if (endX - startX > threshold) {
-        prevSlide();
-    }
-}); 
-
-// Animacja kategorii z dodatkowymi efektami
+// Animacja kart kategorii (pozostawiona inline)
 document.addEventListener('DOMContentLoaded', function() {
     const categoryCards = document.querySelectorAll('.category-card');
-    
     categoryCards.forEach((card, index) => {
-        setTimeout(() => {
-            card.classList.add('animated');
-        }, index * 100);
-        
-        // Dodatkowy efekt hover z opóźnieniem
-        card.addEventListener('mouseenter', function() {
-            this.style.zIndex = '10';
-        });
-        
-        card.addEventListener('mouseleave', function() {
-            this.style.zIndex = '1';
-        });
+        setTimeout(() => card.classList.add('animated'), index * 100);
+        card.addEventListener('mouseenter', () => { card.style.zIndex = '10'; });
+        card.addEventListener('mouseleave', () => { card.style.zIndex = '1'; });
     });
 });
 </script>

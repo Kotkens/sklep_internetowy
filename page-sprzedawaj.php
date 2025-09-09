@@ -93,9 +93,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['preomar_new_product_nonc
   if(!is_user_logged_in()){
     $messages[]=['type'=>'error','text'=>'Musisz być zalogowany.'];
   } else {
-  if( !current_user_can('publish_products') && !current_user_can('publish_posts') ) {
-    $messages[]=['type'=>'error','text'=>'Brak uprawnień do publikacji produktów.'];
-  } else {
+  // Pozwalamy każdemu zalogowanemu użytkownikowi dodać produkt jako "oczekujący na zatwierdzenie" (pending)
     $title = sanitize_text_field($_POST['product_title']??'');
   $price = sanitize_text_field($_POST['product_price']??'');
   $sale_price = sanitize_text_field($_POST['product_sale_price']??'');
@@ -137,7 +135,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['preomar_new_product_nonc
         'post_status'=>'pending',
         'post_author'=>$current_user->ID
       ]);
-      if($post_id && !is_wp_error($post_id)) {
+  if($post_id && !is_wp_error($post_id)) {
   update_post_meta($post_id,'_regular_price',$price);
   // Promocja
   if($sale_price !== '' && is_numeric($sale_price) && $sale_price < $price){
@@ -159,14 +157,21 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['preomar_new_product_nonc
   update_post_meta($post_id,'_manage_stock','yes');
   update_post_meta($post_id,'_stock',$qty);
   update_post_meta($post_id,'_stock_status', $qty>0 ? 'instock':'outofstock');
+  update_post_meta($post_id,'_backorders','no');
         if($cats) wp_set_object_terms($post_id,$cats,'product_cat');
         preomar_upload_featured_image('product_image',$post_id,$messages,true);
+        // Powiadom admina o nowym produkcie do moderacji
+        $admin_email = get_option('admin_email');
+        if($admin_email){
+          $edit_link = admin_url('post.php?post='.$post_id.'&action=edit');
+          wp_mail($admin_email,'Nowy produkt oczekuje na zatwierdzenie','ID: #'.$post_id."\nTytuł: ".$title."\nEdytuj: ".$edit_link);
+        }
         $messages[]=['type'=>'success','text'=>'Produkt zapisany i czeka na zatwierdzenie (#'.$post_id.').'];
       } else {
         $messages[]=['type'=>'error','text'=>'Błąd podczas tworzenia produktu'];
       }
     } else { foreach($errors as $e) $messages[]=['type'=>'error','text'=>$e]; }
-  }}
+  }
 }
 
 // Aktualizacja istniejącego produktu
@@ -238,6 +243,7 @@ if($_SERVER['REQUEST_METHOD']==='POST' && isset($_POST['preomar_edit_product_non
   update_post_meta($edit_id,'_manage_stock','yes');
   update_post_meta($edit_id,'_stock',$qty);
   update_post_meta($edit_id,'_stock_status', $qty>0 ? 'instock':'outofstock');
+  update_post_meta($edit_id,'_backorders','no');
       if($cats) wp_set_object_terms($edit_id,$cats,'product_cat');
       if(!empty($_FILES['edit_product_image']['name'])){
         preomar_upload_featured_image('edit_product_image',$edit_id,$messages,false);
@@ -286,77 +292,75 @@ $categories = get_terms(['taxonomy'=>'product_cat','parent'=>0,'hide_empty'=>fal
 
 // Dopiero teraz ładujemy header (nie było żadnego HTML przed ewentualnymi redirectami)
 get_header();
-if(!is_user_logged_in()) { echo '<div style="max-width:900px;margin:70px auto;padding:60px 50px;background:#fff;border:1px solid #e4e8ee;border-radius:20px;text-align:center;">';
- echo '<h1 style="margin:0 0 18px;font-size:2rem;font-weight:800;color:#1d2e49;">Musisz być zalogowany</h1>';
- echo '<p style="color:#5b6b80;font-size:1rem;margin:0 0 28px;">Zaloguj się aby wystawić przedmiot.</p>';
- echo '<a href="'.esc_url( wp_login_url( get_permalink() ) ).'" style="display:inline-block;background:#0d3b66;color:#fff;padding:14px 28px;border-radius:14px;font-weight:700;text-decoration:none;">Zaloguj się</a>';
+if(!is_user_logged_in()) { echo '<div class="sell-auth-box">';
+ echo '<h1>Musisz być zalogowany</h1>';
+ echo '<p>Zaloguj się aby wystawić przedmiot.</p>';
+ echo '<a class="sell-btn-primary" href="'.esc_url( home_url('/moje-konto/') ).'">Zaloguj się</a>';
  echo '</div>'; get_footer(); return; }
 ?>
-<div class="sell-wrapper" style="max-width:1100px;margin:40px auto 80px;padding:0 20px;">
-  <h1 style="font-size:2.2rem;margin:0 0 34px;font-weight:800;color:#1d2e49;">Wystaw przedmiot</h1>
+<div class="sell-wrapper">
+  <h1 class="sell-title">Wystaw przedmiot</h1>
   <?php if($messages): ?>
-  <div style="display:flex;flex-direction:column;gap:10px;margin:0 0 28px;">
+  <div class="sell-messages">
     <?php foreach($messages as $m): $ok=$m['type']==='success'; ?>
-      <div style="padding:14px 18px;border:1px solid <?php echo $ok?'#b1f1d2':'#ffc9c4'; ?>;background:<?php echo $ok?'#eefdf5':'#fff4f3'; ?>;color:<?php echo $ok?'#065f46':'#9f1d12'; ?>;border-radius:12px;font-weight:600;font-size:.85rem;"><?php echo esc_html($m['text']); ?></div>
+      <div class="sell-message <?php echo $ok? 'is-ok':'is-error'; ?>"><?php echo esc_html($m['text']); ?></div>
     <?php endforeach; ?>
   </div>
   <?php endif; ?>
-  <form method="post" enctype="multipart/form-data" style="background:#ffffff;border:1px solid #e5ebf2;border-radius:22px;padding:40px 46px;box-shadow:0 10px 28px -8px rgba(15,23,42,.12);margin-bottom:55px;">
+  <form method="post" enctype="multipart/form-data" class="sell-form">
     <?php wp_nonce_field('preomar_new_product','preomar_new_product_nonce'); ?>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:26px;">
-      <div style="grid-column:1 / -1;">
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Tytuł *</label>
-        <input type="text" name="product_title" required style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
+    <div class="sell-grid">
+      <div class="field field--full">
+        <label>Tytuł *</label>
+        <input type="text" name="product_title" required>
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Cena (PLN) *</label>
-  <input type="number" min="0" max="10000" step="0.01" name="product_price" required style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
+      <div class="field">
+        <label>Cena (PLN) *</label>
+        <input type="number" min="0" max="10000" step="0.01" name="product_price" required>
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Cena promocyjna</label>
-  <input type="number" min="0" max="10000" step="0.01" name="product_sale_price" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.95rem;">
-        <div style="margin-top:6px;font-size:.55rem;color:#64748b;">(opcjonalnie – niższa niż regularna)</div>
+      <div class="field">
+        <label>Cena promocyjna</label>
+        <input type="number" min="0" max="10000" step="0.01" name="product_sale_price" class="is-sale">
+        <div class="field-note">(opcjonalnie – niższa niż regularna)</div>
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Promocja od</label>
-        <input type="date" name="product_sale_from" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.8rem;">
+      <div class="field">
+        <label>Promocja od</label>
+        <input type="date" name="product_sale_from" class="is-sale">
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Promocja do</label>
-        <input type="date" name="product_sale_to" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.8rem;">
+      <div class="field">
+        <label>Promocja do</label>
+        <input type="date" name="product_sale_to" class="is-sale">
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Ilość sztuk *</label>
-        <input type="number" min="1" step="1" name="product_qty" value="1" required style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
-        <div style="margin-top:6px;font-size:.55rem;color:#64748b;">Kupujący nie będzie mógł dodać do koszyka więcej niż dostępna ilość.</div>
+      <div class="field">
+        <label>Ilość sztuk *</label>
+        <input type="number" min="1" step="1" name="product_qty" value="1" required>
+        <div class="field-note">Kupujący nie będzie mógł dodać do koszyka więcej niż dostępna ilość.</div>
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Kategoria *</label>
-        <select name="product_cat[]" required style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
+      <div class="field">
+        <label>Kategoria *</label>
+        <select name="product_cat[]" required>
           <option value="">-- wybierz --</option>
           <?php foreach($categories as $cat): ?>
             <option value="<?php echo esc_attr($cat->term_id); ?>"><?php echo esc_html($cat->name); ?></option>
           <?php endforeach; ?>
         </select>
       </div>
-      <div>
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Zdjęcie główne *</label>
-        <input type="file" name="product_image" accept="image/jpeg,image/png,image/webp" required style="width:100%;padding:11px 12px;border:1px dashed #c7d2e0;border-radius:12px;background:#f1f5f9;font-weight:500;font-size:.8rem;">
-        <div style="margin-top:6px;font-size:.6rem;line-height:1.4;color:#64748b;font-weight:500;">
-          Wymagania: JPG / PNG / WebP, min. 500x500 px, maks. 10 MB, brak ekstremalnych panoram (proporcje &lt; 3:1). Zalecane jasne tło i produkt wypełniający kadr.
-        </div>
+      <div class="field">
+        <label>Zdjęcie główne *</label>
+        <input type="file" name="product_image" accept="image/jpeg,image/png,image/webp" required class="file-input">
+        <div class="field-note long">Wymagania: JPG / PNG / WebP, min. 500x500 px, maks. 10 MB, brak ekstremalnych panoram (proporcje &lt; 3:1). Zalecane jasne tło i produkt wypełniający kadr.</div>
       </div>
-      <div style="grid-column:1 / -1;">
-        <label style="display:block;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Opis</label>
-        <textarea name="product_desc" rows="6" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:500;font-size:.95rem;line-height:1.5;"></textarea>
+      <div class="field field--full">
+        <label>Opis</label>
+        <textarea name="product_desc" rows="6"></textarea>
       </div>
     </div>
-    <div style="margin:38px 0 0;display:flex;gap:18px;align-items:center;flex-wrap:wrap;">
-      <button type="submit" style="background:linear-gradient(135deg,#ff6b00,#ff832b);color:#fff;font-weight:700;padding:16px 34px;border:none;border-radius:16px;font-size:.95rem;letter-spacing:.5px;cursor:pointer;box-shadow:0 8px 24px -6px rgba(255,107,0,.4);transition:.35s;">Zapisz produkt</button>
-      <a href="<?php echo esc_url( home_url('/ustawienia-konta/') ); ?>" style="font-size:.8rem;font-weight:600;color:#0d3b66;text-decoration:none;">Powrót do ustawień konta</a>
+    <div class="sell-actions">
+      <button type="submit" class="sell-btn-primary">Zapisz produkt</button>
+      <a class="sell-link" href="<?php echo esc_url( home_url('/ustawienia-konta/') ); ?>">Powrót do ustawień konta</a>
     </div>
   </form>
-  <p style="margin:28px 0 0;font-size:.75rem;color:#64748b;">Po zapisaniu produkt trafi do moderacji. Po zatwierdzeniu pojawi się w katalogu.</p>
+  <p class="sell-info">Po zapisaniu produkt trafi do moderacji. Po zatwierdzeniu pojawi się w katalogu.</p>
 
   <?php if($edit_product): ?>
     <?php 
@@ -365,20 +369,14 @@ if(!is_user_logged_in()) { echo '<div style="max-width:900px;margin:70px auto;pa
       $thumb_id = get_post_thumbnail_id($edit_product->ID);
       $thumb_url = $thumb_id ? wp_get_attachment_image_url($thumb_id,'thumbnail') : '';
     ?>
-    <div id="edit-product" style="margin:70px 0 0;">
-      <h2 style="font-size:1.6rem;margin:0 0 24px;font-weight:800;color:#1d2e49;">Edytuj produkt: <?php echo esc_html($edit_product->post_title); ?></h2>
-      <form method="post" enctype="multipart/form-data" style="background:#ffffff;border:1px solid #e5ebf2;border-radius:22px;padding:34px 40px;box-shadow:0 10px 28px -8px rgba(15,23,42,.12);">
+    <div id="edit-product" class="sell-edit-block">
+      <h2 class="sell-subtitle">Edytuj produkt: <?php echo esc_html($edit_product->post_title); ?></h2>
+      <form method="post" enctype="multipart/form-data" class="sell-form sell-form--edit">
         <?php wp_nonce_field('preomar_edit_product','preomar_edit_product_nonce'); ?>
         <input type="hidden" name="edit_product_id" value="<?php echo esc_attr($edit_product->ID); ?>">
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:24px;">
-          <div style="grid-column:1 / -1;">
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Tytuł *</label>
-            <input type="text" name="edit_product_title" required value="<?php echo esc_attr($edit_product->post_title); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
-          </div>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Cena (PLN) *</label>
-            <input type="number" min="0" max="10000" step="0.01" name="edit_product_price" required value="<?php echo esc_attr($edit_price); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
-          </div>
+        <div class="sell-grid">
+          <div class="field field--full"><label>Tytuł *</label><input type="text" name="edit_product_title" required value="<?php echo esc_attr($edit_product->post_title); ?>"></div>
+          <div class="field"><label>Cena (PLN) *</label><input type="number" min="0" max="10000" step="0.01" name="edit_product_price" required value="<?php echo esc_attr($edit_price); ?>"></div>
           <?php 
             $edit_sale_price = get_post_meta($edit_product->ID,'_sale_price',true);
             $edit_sale_from  = get_post_meta($edit_product->ID,'_sale_price_dates_from',true);
@@ -386,53 +384,31 @@ if(!is_user_logged_in()) { echo '<div style="max-width:900px;margin:70px auto;pa
             $edit_sale_from_fmt = $edit_sale_from ? date('Y-m-d', (int)$edit_sale_from) : '';
             $edit_sale_to_fmt   = $edit_sale_to   ? date('Y-m-d', (int)$edit_sale_to) : '';
           ?>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Cena promocyjna</label>
-            <input type="number" min="0" max="10000" step="0.01" name="edit_product_sale_price" value="<?php echo esc_attr($edit_sale_price); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.95rem;">
-          </div>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Promocja od</label>
-            <input type="date" name="edit_product_sale_from" value="<?php echo esc_attr($edit_sale_from_fmt); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.8rem;">
-          </div>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Promocja do</label>
-            <input type="date" name="edit_product_sale_to" value="<?php echo esc_attr($edit_sale_to_fmt); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#fff9f4;font-weight:600;font-size:.8rem;">
-          </div>
+          <div class="field"><label>Cena promocyjna</label><input type="number" min="0" max="10000" step="0.01" name="edit_product_sale_price" value="<?php echo esc_attr($edit_sale_price); ?>" class="is-sale"></div>
+          <div class="field"><label>Promocja od</label><input type="date" name="edit_product_sale_from" value="<?php echo esc_attr($edit_sale_from_fmt); ?>" class="is-sale"></div>
+          <div class="field"><label>Promocja do</label><input type="date" name="edit_product_sale_to" value="<?php echo esc_attr($edit_sale_to_fmt); ?>" class="is-sale"></div>
           <?php $edit_stock = (int)get_post_meta($edit_product->ID,'_stock',true); if($edit_stock<1) $edit_stock=1; ?>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Ilość sztuk *</label>
-            <input type="number" min="1" step="1" name="edit_product_qty" required value="<?php echo esc_attr($edit_stock); ?>" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
-          </div>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Kategoria *</label>
-            <select name="edit_product_cat[]" required style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:600;font-size:.95rem;">
+          <div class="field"><label>Ilość sztuk *</label><input type="number" min="1" step="1" name="edit_product_qty" required value="<?php echo esc_attr($edit_stock); ?>"></div>
+          <div class="field"><label>Kategoria *</label><select name="edit_product_cat[]" required>
               <option value="">-- wybierz --</option>
               <?php foreach($categories as $cat): ?>
                 <option value="<?php echo esc_attr($cat->term_id); ?>" <?php selected( in_array($cat->term_id,$edit_terms,true) ); ?>><?php echo esc_html($cat->name); ?></option>
               <?php endforeach; ?>
-            </select>
-          </div>
-          <div>
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Zdjęcie (podmień)</label>
-            <input type="file" name="edit_product_image" accept="image/jpeg,image/png,image/webp" style="width:100%;padding:11px 12px;border:1px dashed #c7d2e0;border-radius:12px;background:#f1f5f9;font-weight:500;font-size:.8rem;">
-            <div style="margin-top:6px;font-size:.55rem;line-height:1.3;color:#64748b;font-weight:500;">
-              Wymagania jak wyżej: min. 500x500 px, do 10 MB, format JPG/PNG/WebP.
-            </div>
+            </select></div>
+          <div class="field"><label>Zdjęcie (podmień)</label><input type="file" name="edit_product_image" accept="image/jpeg,image/png,image/webp" class="file-input">
+            <div class="field-note">Wymagania jak wyżej: min. 500x500 px, do 10 MB, format JPG/PNG/WebP.</div>
             <?php if($thumb_url): ?>
-              <div style="margin-top:8px;font-size:.65rem;color:#64748b;display:flex;align-items:center;gap:10px;">
-                <img src="<?php echo esc_url($thumb_url); ?>" style="width:46px;height:46px;object-fit:cover;border-radius:8px;border:1px solid #d4dce4;" alt="miniatura">
+              <div class="thumb-current">
+                <img src="<?php echo esc_url($thumb_url); ?>" alt="miniatura">
                 <span>Aktualna miniatura</span>
               </div>
             <?php endif; ?>
           </div>
-          <div style="grid-column:1 / -1;">
-            <label style="display:block;font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#475569;margin:0 0 6px;">Opis</label>
-            <textarea name="edit_product_desc" rows="6" style="width:100%;padding:14px 16px;border:1px solid #d4dce4;border-radius:12px;background:#f8fafc;font-weight:500;font-size:.95rem;line-height:1.5;"><?php echo esc_textarea($edit_product->post_content); ?></textarea>
-          </div>
+          <div class="field field--full"><label>Opis</label><textarea name="edit_product_desc" rows="6"><?php echo esc_textarea($edit_product->post_content); ?></textarea></div>
         </div>
-        <div style="margin:34px 0 0;display:flex;gap:16px;flex-wrap:wrap;align-items:center;">
-          <button type="submit" style="background:#0d3b66;color:#fff;font-weight:700;padding:14px 30px;border:none;border-radius:14px;font-size:.9rem;cursor:pointer;">Zapisz zmiany</button>
-          <a href="<?php echo esc_url( remove_query_arg('edit') ); ?>" style="font-size:.75rem;font-weight:600;color:#334155;text-decoration:none;">Anuluj edycję</a>
+        <div class="sell-actions">
+          <button type="submit" class="sell-btn-alt">Zapisz zmiany</button>
+          <a href="<?php echo esc_url( remove_query_arg('edit') ); ?>" class="sell-link">Anuluj edycję</a>
         </div>
       </form>
     </div>
@@ -448,50 +424,50 @@ if(!is_user_logged_in()) { echo '<div style="max-width:900px;margin:70px auto;pa
       'orderby'=>'date','order'=>'DESC'
   ]);
   if($user_products): ?>
-  <div style="margin:80px 0 0;">
-    <h2 style="font-size:1.6rem;margin:0 0 24px;font-weight:800;color:#1d2e49;">Twoje produkty</h2>
-    <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:18px;background:#fff;">
-      <table style="width:100%;border-collapse:collapse;font-size:.85rem;min-width:760px;">
+  <div class="user-products">
+    <h2 class="sell-subtitle">Twoje produkty</h2>
+    <div class="user-products-table-wrap">
+      <table class="user-products-table">
         <thead>
-          <tr style="background:#f1f5f9;text-align:left;">
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">ID</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Miniatura</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Tytuł</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Cena</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Status</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Data</th>
-            <th style="padding:12px 16px;font-weight:700;color:#475569;font-size:.65rem;letter-spacing:.5px;text-transform:uppercase;">Akcje</th>
+          <tr>
+            <th>ID</th>
+            <th>Miniatura</th>
+            <th>Tytuł</th>
+            <th>Cena</th>
+            <th>Status</th>
+            <th>Data</th>
+            <th>Akcje</th>
           </tr>
         </thead>
         <tbody>
           <?php foreach($user_products as $prod):
               $p_price = get_post_meta($prod->ID,'_regular_price',true);
-              $thumb = get_the_post_thumbnail($prod->ID,'thumbnail',['style'=>'width:50px;height:50px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0;']);
+              $thumb = get_the_post_thumbnail($prod->ID,'thumbnail',['class'=>'user-prod-thumb']);
           ?>
-          <tr style="border-top:1px solid #f1f5f9;">
-            <td style="padding:10px 16px;color:#334155;font-weight:600;">#<?php echo esc_html($prod->ID); ?></td>
-            <td style="padding:10px 16px;"><?php echo $thumb ?: '<span style=\'font-size:.7rem;color:#94a3b8;\'>brak</span>'; ?></td>
-            <td style="padding:10px 16px;color:#0f172a;font-weight:600;max-width:240px;"><?php echo esc_html($prod->post_title); ?></td>
-            <td style="padding:10px 16px;color:#0f172a;"><?php echo $p_price!==''?esc_html(number_format((float)$p_price,2,',',' ')).' zł':'-'; ?></td>
-            <td style="padding:10px 16px;">
+          <tr>
+            <td data-label="ID">#<?php echo esc_html($prod->ID); ?></td>
+            <td data-label="Miniatura"><?php echo $thumb ?: '<span class="no-thumb">brak</span>'; ?></td>
+            <td data-label="Tytuł" class="prod-title"><?php echo esc_html($prod->post_title); ?></td>
+            <td data-label="Cena"><?php echo $p_price!==''?esc_html(number_format_i18n((float)$p_price,2)).' zł':'-'; ?></td>
+            <td data-label="Status">
               <?php
                 $st = $prod->post_status;
                 $badgeColor = ['pending'=>'#f59e0b','publish'=>'#059669','draft'=>'#64748b'];
                 $label = ['pending'=>'Oczekuje','publish'=>'Opublikowany','draft'=>'Szkic'];
               ?>
-              <span style="display:inline-block;background:<?php echo $badgeColor[$st]??'#94a3b8'; ?>;color:#fff;padding:4px 10px;border-radius:30px;font-size:.6rem;font-weight:700;letter-spacing:.5px;"><?php echo $label[$st]??$st; ?></span>
+              <span class="status-badge" style="--badge-color:<?php echo $badgeColor[$st]??'#94a3b8'; ?>;"><?php echo $label[$st]??$st; ?></span>
             </td>
-            <td style="padding:10px 16px;color:#475569;"><?php echo esc_html( get_the_date('Y-m-d',$prod) ); ?></td>
-            <td style="padding:10px 16px;">
-              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-                <a href="<?php echo esc_url( add_query_arg('edit',$prod->ID) ); ?>#edit-product" style="display:inline-block;background:#0d3b66;color:#fff;padding:6px 14px;border-radius:10px;font-size:.65rem;font-weight:700;text-decoration:none;">Edytuj</a>
+            <td data-label="Data"><?php echo esc_html( get_the_date('Y-m-d',$prod) ); ?></td>
+            <td data-label="Akcje">
+              <div class="row-actions">
+                <a href="<?php echo esc_url( add_query_arg('edit',$prod->ID) ); ?>#edit-product" class="act act-edit">Edytuj</a>
                 <?php if($prod->post_status==='publish'): ?>
-                  <a href="<?php echo get_permalink($prod->ID); ?>" target="_blank" style="display:inline-block;background:#334155;color:#fff;padding:6px 12px;border-radius:10px;font-size:.65rem;font-weight:700;text-decoration:none;">Podgląd</a>
+                  <a href="<?php echo get_permalink($prod->ID); ?>" target="_blank" class="act act-preview">Podgląd</a>
                 <?php endif; ?>
-                <form method="post" onsubmit="return confirm('Na pewno przenieść do kosza?');" style="margin:0;">
+                <form method="post" onsubmit="return confirm('Na pewno przenieść do kosza?');" class="act-inline">
                   <?php wp_nonce_field('preomar_delete_product','preomar_delete_product_nonce'); ?>
                   <input type="hidden" name="delete_product_id" value="<?php echo esc_attr($prod->ID); ?>">
-                  <button type="submit" style="background:#b91c1c;color:#fff;border:none;padding:6px 12px;border-radius:10px;font-size:.65rem;font-weight:700;cursor:pointer;">Usuń</button>
+                  <button type="submit" class="act act-delete">Usuń</button>
                 </form>
               </div>
             </td>

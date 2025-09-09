@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8" />
+<title>Poradnik obsługi sklepu – wersja do PDF</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<style>
+:root { --accent:#ff6b35; --bg:#0f1324; }
+body { font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; line-height:1.45; margin:40px auto; max-width:860px; color:#1e2430; }
+h1,h2,h3 { line-height:1.2; font-weight:600; }
+h1 { font-size:2.1rem; margin-top:0; }
+h2 { margin-top:2.2em; font-size:1.35rem; border-left:4px solid var(--accent); padding-left:10px; }
+h3 { margin-top:1.6em; font-size:1.15rem; }
+hr { border:0; border-top:1px solid #d4dae2; margin:2.2em 0; }
+p,li { font-size:.95rem; }
+ul { padding-left:1.2em; }
+code { background:#f1f4f8; padding:2px 5px; border-radius:4px; font-size:.85rem; }
+table { border-collapse:collapse; width:100%; font-size:.85rem; margin:1em 0; }
+th,td { border:1px solid #ccd4dd; padding:6px 8px; text-align:left; }
+blockquote { margin:1em 0; padding:.8em 1em; background:#f7f9fc; border-left:4px solid var(--accent); }
+.checklist input { margin-right:6px; }
+.small { font-size:.75rem; color:#64748b; }
+@media print { body { margin:10mm 10mm; } a[href]:after { content:" (" attr(href) ")"; font-size:.7em; color:#555; } .no-print { display:none!important; } }
+.header-note { background:#ffe8df; border:1px solid #ffc9b5; padding:10px 14px; border-radius:6px; margin-bottom:28px; }
+</style>
+</head>
+<body>
+<div class="header-note no-print">
+<strong>Instrukcja:</strong> Aby zapisać jako PDF użyj: Ctrl+P (Windows) / Cmd+P (macOS) → "Zapisz jako PDF". Ustaw marginesy: Brak lub Wąskie; włącz tła jeśli chcesz kolory.
+</div>
+<h1>Poradnik obsługi sklepu (dla właściciela)</h1>
+<p>Zwięzły przewodnik – tylko realnie potrzebne rzeczy do codziennej obsługi i prostych zmian wyglądu (slider, logo, stopka).</p>
+<hr/>
+<h2>1. Co masz?</h2>
+<p>Masz sklep na WordPress + WooCommerce. Panel logowania: <code>/wp-admin</code> (login + hasło). Po zalogowaniu menu po lewej.</p>
+<ul><li>WooCommerce → Zamówienia</li><li>Produkty → Wszystkie / Dodaj nowy</li><li>Produkty → Kategorie</li><li>WooCommerce → Raporty / Analityka</li><li>Użytkownicy (opcjonalnie)</li></ul>
+<h2>2. Codzienna checklista (5 minut)</h2>
+<ul class="checklist"><li>[ ] Zamówienia: nowe?</li><li>[ ] Status opłaconych → Przetwarzanie</li><li>[ ] Produkty oczekujące (jeśli włączone dodawanie)</li><li>[ ] Kluczowe stany magazynowe</li></ul>
+<h2>3. Dodawanie produktu</h2>
+<ol><li>Produkty → Dodaj nowy</li><li>Tytuł (krótki, jasny)</li><li>Krótki opis (sprzedażowy) – obok zdjęcia</li><li>Długi opis (opcjonalny)</li><li>Kategoria (min. jedna)</li><li>Cena regularna / promocyjna</li><li>Magazyn: SKU + ilość (&gt;0)</li><li>Zdjęcie główne + galeria</li><li>Opublikuj</li></ol>
+<p>Ilość 0 = produkt znika z list (ukrywanie braków włączone).</p>
+<h2>4. Edycja produktu</h2>
+<p>Produkty → najedź → Edytuj → zmień → Zaktualizuj. Cena promocyjna = stara przekreślona.</p>
+<h2>5. Kategorie</h2>
+<p>Produkty → Kategorie. Nazwa widoczna dla klienta; slug zostaw automatycznie. Możesz ustawić nadrzędną dla struktury. Nie duplikuj nazw.</p>
+<h2>6. Zamówienia</h2>
+<p>WooCommerce → Zamówienia:</p>
+<ul><li>Szare – Oczekujące</li><li>Żółte – Wstrzymane</li><li>Niebieskie – Przetwarzanie</li><li>Zielone – Zakończone</li><li>Czerwone – Anulowane/nieudane</li></ul>
+<p>Wejdź, sprawdź dane, przygotuj wysyłkę, po wysyłce → Zakończone.</p>
+<h2>7. Stany magazynowe</h2>
+<p>Edytuj produkt → zaznacz „Zarządzaj stanem” → wpisz ilość. Masowo: zaznacz produkty → Edycja zbiorcza → Ilość.</p>
+<h2>8. Produkty użytkowników (jeśli aktywne)</h2>
+<p>Strona „Sprzedawaj” tworzy wpisy w statusie Oczekujące. Zweryfikuj → Opublikuj albo usuń.</p>
+<h2>9. Promocje / kupony</h2>
+<p>Pojedynczy produkt: Cena promocyjna. Masowe akcje: WooCommerce → Kupony → Dodaj (kod, typ, limit).</p>
+<h2>10. Obrazy – zasady</h2>
+<ul><li>JPG (zdjęcia), PNG (grafika/półprzezroczystość), WebP (jeśli dostępne)</li><li>Szerokość ~1200px zwykle wystarczy</li><li>Nazwa pliku opisowa</li></ul>
+<h2>11. Klienci i konta</h2>
+<p>Użytkownicy – nie zmieniaj ról bez potrzeby. Reset hasła klient robi sam. Usuwając konto zdecyduj o treściach.</p>
+<h2>12. Raporty</h2>
+<p>WooCommerce → Raporty / Analityka: sprzedaż według dat, bestsellery, niskie stany (raz tygodniowo).</p>
+<h2>13. Aktualizacje i bezpieczeństwo</h2>
+<ul><li>Backup przed masową aktualizacją</li><li>Silne hasła, minimum kont admina</li><li>Notuj co aktualizujesz</li></ul>
+<h2>14. FAQ</h2>
+<table><thead><tr><th>Pytanie</th><th>Odpowiedź</th></tr></thead><tbody><tr><td>Produkt zniknął</td><td>Ilość 0 – uzupełnij</td></tr><tr><td>Brak produktu użytkownika</td><td>Status „Oczekujące”</td></tr><tr><td>Klient nie dostał maila</td><td>Niech sprawdzi spam; jeśli powtarza się – zgłoś</td></tr><tr><td>Chcę ukryć produkt</td><td>Ustaw ilość 0 lub widoczność „Ukryty”</td></tr><tr><td>Masowa zmiana cen</td><td>Eksport → edycja → import (ostrożnie)</td></tr></tbody></table>
+<h2>15. Gdy coś nie działa</h2>
+<ol><li>Tryb prywatny / odśwież</li><li>Wszystkie czy pojedyncze?</li><li>Co ostatnio zmieniane?</li><li>Zapisz godzinę + zrzut ekranu → wyślij wsparciu</li></ol>
+<h2>16. Priorytety</h2>
+<ol><li>Ilości &gt; 0</li><li>Szybka obsługa zamówień</li><li>Dobre zdjęcia</li><li>Proste promocje</li><li>Małe częste poprawki</li></ol>
+<h2>17. Mini słowniczek</h2>
+<ul><li>SKU – wewnętrzny kod</li><li>Przetwarzanie – opłacone, w realizacji</li><li>Zakończone – wysłane</li><li>Oczekujące – płatność / publikacja</li></ul>
+<h2>18. Lista przed kampanią</h2>
+<ul class="checklist"><li>[ ] Stany sprawdzone</li><li>[ ] Promocje ustawione</li><li>[ ] Grafiki gotowe</li><li>[ ] Test zakupu wykonany</li><li>[ ] Testowy mail otrzymany</li></ul>
+<h2>19. Pomoc</h2>
+<ul><li>Sprzedaż: szczegóły zamówienia w panelu</li><li>Techniczne: opis + zrzut</li><li>Import/eksport pierwszy raz – pytaj</li></ul>
+<h2>20. Esencja</h2>
+<p><strong>Codziennie:</strong> zamówienia + stany. <strong>Tygodniowo:</strong> raport. <strong>Produkt:</strong> tytuł, cena, zdjęcie, kategoria, ilość. <strong>Promocja:</strong> cena promocyjna lub kupon. <strong>Awaria:</strong> notatka + zrzut.</p>
+<h2>21. Wygląd: slider, logo, stopka</h2>
+<h3>21.1 Hero Slider</h3>
+<p>Menu: Hero Slides. Każdy slajd = wpis. Pola: nagłówek (część 1 + wyróżnione słowo), discount, opis (Enter = 2 linia), przycisk (tekst + URL), gradient, checkbox „Aktywny”. Obrazek wyróżniający = grafika. Kolejność: Quick Edit → „Kolejność”. Brak aktywnych = 3 domyślne.</p>
+<h3>21.2 Logo</h3>
+<p>Wygląd → Dostosuj → Tożsamość witryny → Logo. Alt z biblioteki (lub nazwa strony). Strona główna – logo bez linku; podstrony – link do startu.</p>
+<h3>21.3 Stopka (copyright)</h3>
+<p>Wygląd → Dostosuj → Stopka. Pole tekstowe – możesz użyć <code>{YEAR}</code>. Przykład: © {YEAR} PreoMarket. Wszystkie prawa zastrzeżone.</p>
+<h3>21.4 Favicon</h3>
+<p>Wygląd → Dostosuj → Tożsamość witryny → Ikona witryny. 512×512 PNG/WebP. Jeśli nie ustawisz – fallback: <code>logo_strona.png</code>. Po zmianie odśwież w trybie prywatnym (cache).</p>
+<h3>21.5 Szybka ściąga wizualna</h3>
+<ul class="checklist"><li>[ ] Nowy slajd → Dodaj → obrazek → pola → Opublikuj</li><li>[ ] Ukryj slajd → odznacz „Aktywny”</li><li>[ ] Kolejność → Quick Edit → liczba</li><li>[ ] Logo → Dostosuj → Tożsamość</li><li>[ ] Stopka → Dostosuj → Stopka</li><li>[ ] Favicon → Dostosuj → Tożsamość → Ikona witryny</li></ul>
+<hr/>
+<p class="small">Wersja eksportowa HTML → PDF. Możesz zachować lokalnie i aktualizować wraz z rozwojem sklepu.</p>
+</body>
+</html>

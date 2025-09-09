@@ -35,6 +35,7 @@
     /* Pasek kategorii pod nagłówkiem */
     .categories-navigation{top:var(--header-height);} /* pozostaje sticky ale pod headerem */
     @media (max-width:780px){ .categories-navigation{top:calc(var(--header-height));} }
+    body.shop-empty .categories-navigation{display:none;}
         .top-bar-item {
             display: flex;
             align-items: center;
@@ -198,6 +199,13 @@
     <script>
         // Categories dropdown functionality
         document.addEventListener('DOMContentLoaded', function() {
+                // Ustaw dynamicznie wysokość paska kategorii do obliczeń sticky footer
+                (function(){
+                    var catNav = document.querySelector('.categories-navigation');
+                    function setCatH(){ if(catNav){ document.documentElement.style.setProperty('--cat-nav-height', catNav.offsetHeight + 'px'); } }
+                    setCatH();
+                    window.addEventListener('resize', setCatH);
+                })();
             // Fixed header init
             (function(){
                 const header=document.querySelector('.site-header');
@@ -247,6 +255,26 @@
                     }
                 });
             }
+
+            // User menu dropdown na kliknięcie
+            (function(){
+                var userMenu = document.querySelector('.site-header .user-menu');
+                if(!userMenu) return;
+                var dropdown = userMenu.querySelector('.user-dropdown');
+                userMenu.addEventListener('click', function(e){
+                    // jeżeli kliknięto link w dropdownie – pozwól przejść dalej
+                    if(e.target.closest('.user-dropdown a')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    userMenu.classList.toggle('open');
+                });
+                document.addEventListener('click', function(e){
+                    if(!userMenu.contains(e.target)) userMenu.classList.remove('open');
+                });
+                document.addEventListener('keydown', function(e){
+                    if(e.key==='Escape') userMenu.classList.remove('open');
+                });
+            })();
         });
     </script>
 
@@ -257,26 +285,28 @@
     <header class="site-header">
         <div class="header-container">
             <!-- Logo -->
-            <a href="<?php echo home_url(); ?>" class="site-logo">
-                <?php if (has_custom_logo()) : ?>
-                    <?php the_custom_logo(); ?>
-                <?php else : ?>
-                    <img src="<?php echo get_template_directory_uri(); ?>/assets/images/logo_strona.png" alt="PreoMarket - Sklep z używanymi rzeczami" class="logo-image">
+            <div class="site-logo">
+                <?php if ( has_custom_logo() ) :
+                    the_custom_logo();
+                else : ?>
+                    <a href="<?php echo esc_url( home_url('/') ); ?>" rel="home">
+                        <img src="<?php echo esc_url( get_template_directory_uri() ); ?>/assets/images/logo_strona.png" alt="<?php echo esc_attr( get_bloginfo('name','display') ); ?>" class="logo-image" />
+                    </a>
                 <?php endif; ?>
-            </a>
+            </div>
             
             <!-- Wyszukiwarka -->
             <div class="search-container">
                 <?php $shop_url = function_exists('wc_get_page_permalink') ? wc_get_page_permalink('shop') : home_url('/sklep/'); ?>
                 <form class="search-form" method="get" action="<?php echo esc_url( $shop_url ); ?>">
-                    <input type="text" 
-                           name="s" 
-                           class="search-input" 
-                           placeholder="czego szukasz? np. telefon, sukienka, meble..."
-                           value="<?php echo get_search_query(); ?>">
+              <input type="text" 
+                  name="s" 
+                  class="search-input" 
+                  placeholder="czego szukasz?"
+                  value="<?php echo get_search_query(); ?>">
                     
                     <select name="product_cat" class="search-category">
-                        <option value="">Wszystkie kategorie</option>
+                        <option value="">Wszystkie</option>
                         
                         <!-- Główne kategorie produktów -->
                         <option value="elektronika">Elektronika</option>
@@ -325,6 +355,29 @@
                     <button type="submit" class="search-button">SZUKAJ</button>
                 </form>
                 <script>
+                document.addEventListener('DOMContentLoaded', function(){
+                    var form = document.querySelector('.search-form');
+                    if(!form) return;
+                    form.addEventListener('submit', function(ev){
+                        var s = form.querySelector('input[name="s"]');
+                        var cat = form.querySelector('select[name="product_cat"]');
+                        var orderby = form.querySelector('input[name="orderby"]');
+                        var minp = form.querySelector('input[name="min_price"]');
+                        var maxp = form.querySelector('input[name="max_price"]');
+                        // Usuń puste s
+                        if (s && (!s.value || s.value.trim() === '')) { s.name = ''; }
+                        // Usuń pustą kategorię
+                        if (cat && (!cat.value || cat.value.trim() === '')) { cat.name = ''; }
+                        // Usuń domyślne widełki cen gdy użytkownik nie filtrował
+                        if (minp && maxp && minp.value === '0' && maxp.value === '10000') {
+                            minp.name = ''; maxp.name = '';
+                        }
+                        // Usuń puste orderby (niech Woo ustali domyślne)
+                        if (orderby && (!orderby.value || orderby.value.trim() === '')) { orderby.name = ''; }
+                    });
+                });
+                </script>
+                <script>
                 // Ustaw hidden orderby przy submit jeśli brak w URL a jest preferencja zapisana
                 (function(){
                     var form = document.querySelector('.search-form');
@@ -352,13 +405,23 @@
             
             <!-- Akcje nagłówka -->
             <div class="header-actions">
+                <?php if ( is_user_logged_in() ) : ?>
                 <a href="<?php echo esc_url( home_url('/sprzedawaj/') ); ?>" class="header-link">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
                     </svg>
                     <span>Sprzedawaj</span>
                 </a>
+                <?php else: ?>
+                <a href="#" class="header-link need-login-gate" data-target="sprzedawaj">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                    <span>Sprzedawaj</span>
+                </a>
+                <?php endif; ?>
                 
+                <?php if ( is_user_logged_in() ) : ?>
                 <a href="<?php echo esc_url(home_url('/obserwowane/')); ?>" class="header-link wishlist-link" data-wishlist-link>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
@@ -371,7 +434,17 @@
                     ?>
                     <span class="wishlist-count" id="wishlistCount"><?php echo (int)$preomar_wishlist_count; ?></span>
                 </a>
+                <?php else: ?>
+                <a href="#" class="header-link wishlist-link need-login-gate" data-target="obserwowane" data-wishlist-link>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                    <span>Obserwowane</span>
+                    <span class="wishlist-count" id="wishlistCount">0</span>
+                </a>
+                <?php endif; ?>
                 
+                <?php if ( is_user_logged_in() ) : ?>
                 <a href="<?php echo home_url('/koszyk/'); ?>" class="header-link cart-link">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
@@ -379,6 +452,15 @@
                     <span>Koszyk</span>
                     <span class="cart-count"><?php echo class_exists('WooCommerce') && WC()->cart ? WC()->cart->get_cart_contents_count() : '0'; ?></span>
                 </a>
+                <?php else: ?>
+                <a href="#" class="header-link cart-link need-login-cart" data-login-required="1">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12L8.1 13h7.45c.75 0 1.41-.41 1.75-1.03L21.7 4H5.21l-.94-2H1zm16 16c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                    </svg>
+                    <span>Koszyk</span>
+                    <span class="cart-count">0</span>
+                </a>
+                <?php endif; ?>
                 
                 <?php if (is_user_logged_in()) : ?>
                     <?php $current_user = wp_get_current_user(); ?>
@@ -407,6 +489,33 @@
             </div>
         </div>
     </header>
+
+    <?php if ( ! is_user_logged_in() ) : ?>
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+        var loginUrlBase = '<?php echo esc_js( get_permalink( get_option('woocommerce_myaccount_page_id') ) ); ?>';
+        document.querySelectorAll('a.need-login-gate, a.need-login-cart').forEach(function(el){
+            el.addEventListener('click', function(e){
+                e.preventDefault();
+                var target = el.getAttribute('data-target') || 'koszyk';
+                var msgs = {
+                    koszyk: 'Aby zobaczyć swój koszyk musisz się zalogować.',
+                    sprzedawaj: 'Aby wystawić przedmiot musisz być zalogowany.',
+                    obserwowane: 'Aby przeglądać obserwowane musisz się zalogować.'
+                };
+                var msg = msgs[target] || 'Musisz się zalogować.';
+                var loginUrl = loginUrlBase + '?redirect_to=' + encodeURIComponent(target);
+                if (window.preomarShowInlineNotice) {
+                    window.preomarShowInlineNotice(msg + ' <br><a href="'+loginUrl+'" style="color:#fff;text-decoration:underline;">Przejdź do logowania</a>', 'gate-'+target);
+                } else {
+                    alert(msg);
+                    window.location.href = loginUrl;
+                }
+            });
+        });
+    });
+    </script>
+    <?php endif; ?>
 
     <!-- Menu kategorii w nowoczesnym stylu -->
     <nav class="categories-navigation">

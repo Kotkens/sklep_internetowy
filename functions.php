@@ -13,8 +13,15 @@ if (!defined('ABSPATH')) {
 
 // Konfiguracja motywu
 function preomar_setup() {
-    // Dodaj wsparcie dla logo
-    add_theme_support('custom-logo');
+    // Wsparcie dla logo (konfigurowalne z panelu: Wygląd > Dostosuj > Tożsamość witryny)
+    add_theme_support('custom-logo', [
+        'height'               => 80,      // sugerowana wysokość
+        'width'                => 80,      // sugerowana szerokość
+        'flex-height'          => true,    // elastyczne wymiary – brak konieczności dokładnego przycięcia
+        'flex-width'           => true,
+        'header-text'          => [ 'site-title', 'site-description' ],
+        'unlink-homepage-logo' => true     // na stronie głównej logo nie będzie linkiem (lepsza semantyka + SEO)
+    ]);
     
     // Dodaj wsparcie dla miniaturek
     add_theme_support('post-thumbnails');
@@ -40,6 +47,223 @@ function preomar_setup() {
     ));
 }
 add_action('after_setup_theme', 'preomar_setup');
+
+// Zapewnij poprawny atrybut alt dla logo jeśli nie ustawiono w bibliotece mediów
+add_filter('get_custom_logo', function($html){
+    if(!$html) return $html;
+    $alt = esc_attr( get_bloginfo('name', 'display') );
+    if(strpos($html, 'alt=') === false){
+        $html = str_replace('<img ', '<img alt="'.$alt.'" ', $html);
+    }
+    return $html;
+});
+
+// ================== CUSTOMIZER: Tekst stopki ==================
+add_action('customize_register', function($wp_customize){
+    // Sekcja – jeśli chcesz osobną, tworzymy prostą sekcję motywu
+    $wp_customize->add_section('preomar_footer_section', [
+        'title'    => __('Stopka', 'preomar'),
+        'priority' => 160,
+    ]);
+
+    $wp_customize->add_setting('preomar_footer_copyright', [
+        'default'           => '© {YEAR} PreoMarket. Wszystkie prawa zastrzeżone.',
+        'sanitize_callback' => function($val){
+            $val = wp_kses_post($val); // pozwól na proste znaczniki (np. <a>)
+            return $val;
+        },
+        'transport' => 'refresh',
+    ]);
+
+    $wp_customize->add_control('preomar_footer_copyright', [
+        'label'       => __('Tekst praw autorskich', 'preomar'),
+        'description' => __('Możesz użyć {YEAR} aby automatycznie wstawić bieżący rok.', 'preomar'),
+        'section'     => 'preomar_footer_section',
+        'type'        => 'textarea',
+    ]);
+});
+
+// Helper do pobrania tekstu stopki (z makrem {YEAR})
+function preomar_get_footer_copyright(){
+    $raw = get_theme_mod('preomar_footer_copyright');
+    if(!$raw){
+        $raw = '© {YEAR} '.get_bloginfo('name').' – Wszystkie prawa zastrzeżone.';
+    }
+    $year = date('Y');
+    $out = str_replace('{YEAR}', $year, $raw);
+    return wp_kses_post($out);
+}
+
+// ================== FAVICON (fallback -> logo_strona.png) ==================
+// WordPress: jeśli użytkownik nie ustawi Ikony witryny (Site Icon) w Dostosuj > Tożsamość witryny,
+// użyjemy pliku motywu assets/images/logo_strona.png jako faviconu.
+add_filter('get_site_icon_url', function($url){
+    if (empty($url)) {
+        $fallback = get_template_directory_uri() . '/assets/images/logo_strona.png';
+        return $fallback;
+    }
+    return $url;
+});
+// Dodatkowo dołóż tagi w <head>, gdy brak oficjalnej ikony (dla przeglądarek które nie wołają filtra).
+add_action('wp_head', function(){
+    if (!has_site_icon()) {
+        $fallback = esc_url(get_template_directory_uri() . '/assets/images/logo_strona.png');
+        echo "\n<link rel=\"icon\" href=\"{$fallback}\" sizes=\"32x32\">"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo "\n<link rel=\"icon\" href=\"{$fallback}\" sizes=\"192x192\">"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo "\n<link rel=\"apple-touch-icon\" href=\"{$fallback}\">"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+        echo "\n<meta name=\"msapplication-TileImage\" content=\"{$fallback}\">"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    }
+}, 5);
+
+/**
+ * ================= HERO SLIDER (dynamiczny) =================
+ * CPT: hero_slide + meta pola. Umożliwia edycję slidera z panelu WP.
+ * Pola:
+ * - heading_before (tekst przed <strong>)
+ * - heading_strong (wyróżnione słowo w <strong>)
+ * - discount (np. -40%)
+ * - description (krótki opis w 2 liniach)
+ * - button_text / button_url (opcjonalny przycisk)
+ * - gradient (background CSS linear-gradient)
+ * - active (checkbox – czy wyświetlać)
+ * Wyrenderowanie: patrz template-parts/hero/slider.php
+ */
+add_action('init', function(){
+    $labels = [
+        'name' => 'Hero Slides',
+        'singular_name' => 'Hero Slide',
+        'menu_name' => 'Hero Slides',
+        'add_new' => 'Dodaj slajd',
+        'add_new_item' => 'Dodaj nowy slajd',
+        'edit_item' => 'Edytuj slajd',
+        'new_item' => 'Nowy slajd',
+        'view_item' => 'Podgląd slajdu',
+        'search_items' => 'Szukaj slajdów'
+    ];
+    register_post_type('hero_slide',[
+        'labels' => $labels,
+        'public' => false,
+        'show_ui' => true,
+        'show_in_menu' => true,
+        'menu_icon' => 'dashicons-images-alt2',
+        'supports' => ['title','thumbnail','page-attributes'],
+        'hierarchical' => false,
+        'show_in_rest' => false,
+    ]);
+});
+
+// Meta box
+add_action('add_meta_boxes', function(){
+    add_meta_box('preomar_hero_slide_meta','Ustawienia slajdu','preomar_render_hero_slide_meta','hero_slide','normal','high');
+});
+
+function preomar_render_hero_slide_meta($post){
+    wp_nonce_field('preomar_save_hero_slide','preomar_hero_slide_nonce');
+    $get = function($k) use ($post){ return get_post_meta($post->ID,$k,true); };
+    $heading_before = esc_attr($get('_hs_heading_before'));
+    $heading_strong = esc_attr($get('_hs_heading_strong'));
+    $discount = esc_attr($get('_hs_discount'));
+    $description = esc_textarea($get('_hs_description'));
+    $button_text = esc_attr($get('_hs_button_text'));
+    $button_url = esc_url($get('_hs_button_url'));
+    $gradient = esc_attr($get('_hs_gradient'));
+    $active = $get('_hs_active') === '1';
+    echo '<p><label><strong>Nagłówek – część przed pogrubieniem</strong><br><input type="text" style="width:100%" name="_hs_heading_before" value="'.$heading_before.'" placeholder="Stylowy" /></label></p>';
+    echo '<p><label><strong>Wyróżnione słowo (w <strong>)</strong><br><input type="text" style="width:100%" name="_hs_heading_strong" value="'.$heading_strong.'" placeholder="salon vintage" /></label></p>';
+    echo '<p><label><strong>Discount (np. -40%)</strong><br><input type="text" name="_hs_discount" value="'.$discount.'" placeholder="-30%" /></label></p>';
+    echo '<p><label><strong>Opis (linia 1 / 2 – użyj \n dla nowej linii)</strong><br><textarea name="_hs_description" rows="3" style="width:100%" placeholder="meble i akcesoria retro\nw najlepszych cenach">'.$description.'</textarea></label></p>';
+    echo '<p style="display:flex;gap:12px;"><label style="flex:1"><strong>Przycisk – tekst</strong><br><input type="text" name="_hs_button_text" value="'.$button_text.'" placeholder="Zobacz oferty" /></label>';
+    echo '<label style="flex:1"><strong>Przycisk – URL</strong><br><input type="url" name="_hs_button_url" value="'.$button_url.'" placeholder="/kategoria/dom-ogrod" /></label></p>';
+    echo '<p><label><strong>Gradient tła (linear-gradient)</strong><br><input type="text" style="width:100%" name="_hs_gradient" value="'.$gradient.'" placeholder="linear-gradient(135deg,#ff5722 0%,#e91e63 100%)" /></label></p>';
+    echo '<p><label><input type="checkbox" name="_hs_active" value="1" '.checked($active,true,false).'/> Aktywny (pokazuj w sliderze)</label></p>';
+    echo '<p style="font-size:11px;color:#555">Ustaw obrazek wyróżniający jako grafikę slajdu (po prawej). Kolejność slajdów ustaw za pomocą "Atrybuty wpisu &gt; Kolejność".</p>';
+}
+
+add_action('save_post_hero_slide', function($post_id){
+    if(defined('DOING_AUTOSAVE') && DOING_AUTOSAVE) return; 
+    if(!isset($_POST['preomar_hero_slide_nonce']) || !wp_verify_nonce($_POST['preomar_hero_slide_nonce'],'preomar_save_hero_slide')) return;
+    $fields = [
+        '_hs_heading_before' => 'sanitize_text_field',
+        '_hs_heading_strong' => 'sanitize_text_field',
+        '_hs_discount' => 'sanitize_text_field',
+        '_hs_description' => function($v){ return wp_kses_post($v); },
+        '_hs_button_text' => 'sanitize_text_field',
+        '_hs_button_url' => 'esc_url_raw',
+        '_hs_gradient' => 'sanitize_text_field',
+    ];
+    foreach($fields as $k=>$cb){ if(isset($_POST[$k])) { $val = $_POST[$k]; if(is_callable($cb)) $val = call_user_func($cb,$val); update_post_meta($post_id,$k,$val); } }
+    update_post_meta($post_id,'_hs_active', isset($_POST['_hs_active']) ? '1':'0');
+    // Invalidate cache
+    delete_transient('preomar_hero_slides');
+});
+
+add_action('before_delete_post', function($pid){ if(get_post_type($pid)==='hero_slide'){ delete_transient('preomar_hero_slides'); } });
+
+if(!function_exists('preomar_get_hero_slides')){
+    function preomar_get_hero_slides(){
+        $cached = get_transient('preomar_hero_slides');
+        if($cached !== false) return $cached;
+        // Pobierz wszystkie slajdy i później odfiltruj (aby nowe – bez meta aktywne – też się pokazały)
+        $q = new WP_Query([
+            'post_type' => 'hero_slide',
+            'posts_per_page' => -1,
+            'orderby' => 'menu_order',
+            'order' => 'ASC',
+            'post_status' => 'publish'
+        ]);
+        $slides = [];
+        if($q->have_posts()){
+            while($q->have_posts()){ $q->the_post();
+                $id = get_the_ID();
+                $active_meta = get_post_meta($id,'_hs_active',true);
+                if($active_meta === '0') continue; // jawnie wyłączony
+                $gradient = get_post_meta($id,'_hs_gradient',true);
+                // Prosta walidacja gradientu – tylko linear-gradient i brak średników
+                if($gradient && !preg_match('/^linear-gradient\([^;]+\)$/i',$gradient)) $gradient = '';
+                if(!$gradient) $gradient = 'linear-gradient(135deg,#4caf50 0%,#2e7d32 100%)';
+                $desc = (string) get_post_meta($id,'_hs_description',true);
+                $desc = str_replace(["\r\n","\r"],"\n",$desc);
+                $lines = array_map('trim', explode("\n", $desc));
+                $slides[] = [
+                    'ID' => $id,
+                    'title' => get_the_title(),
+                    'heading_before' => get_post_meta($id,'_hs_heading_before',true),
+                    'heading_strong' => get_post_meta($id,'_hs_heading_strong',true),
+                    'discount' => get_post_meta($id,'_hs_discount',true),
+                    'lines' => $lines,
+                    'button_text' => get_post_meta($id,'_hs_button_text',true),
+                    'button_url' => get_post_meta($id,'_hs_button_url',true),
+                    'gradient' => $gradient,
+                    'image_id' => get_post_thumbnail_id($id),
+                ];
+            }
+            wp_reset_postdata();
+        }
+        set_transient('preomar_hero_slides', $slides, 5*MINUTE_IN_SECONDS);
+        return $slides;
+    }
+}
+// ==============================================================
+// Kolumny w adminie dla CPT hero_slide
+add_filter('manage_hero_slide_posts_columns', function($cols){
+    $new = [];
+    foreach($cols as $k=>$v){
+        if($k==='title') $new['thumbnail']='Obraz';
+        $new[$k]=$v;
+        if($k==='title'){ $new['discount']='Rabat'; $new['active']='Aktywny'; }
+    }
+    return $new;
+});
+add_action('manage_hero_slide_posts_custom_column', function($col,$post_id){
+    if($col==='discount') echo esc_html(get_post_meta($post_id,'_hs_discount',true));
+    elseif($col==='active'){ $a = get_post_meta($post_id,'_hs_active',true); echo $a==='0' ? '<span style="color:#dc2626">Nie</span>' : '<span style="color:#16a34a">Tak</span>'; }
+    elseif($col==='thumbnail'){ if(has_post_thumbnail($post_id)) echo get_the_post_thumbnail($post_id,'thumbnail',['style'=>'width:60px;height:auto;border-radius:4px;']); }
+},10,2);
+add_action('admin_notices', function(){
+    $screen = get_current_screen();
+    if(!$screen || $screen->post_type!=='hero_slide' || $screen->base!=='edit') return;
+    echo '<div class="notice notice-info"><p><strong>Hero Slider:</strong> Nowo utworzone slajdy są domyślnie aktywne. Aby ukryć – edytuj slajd i odznacz pole "Aktywny". Kolejność ustawiasz w Kolumnie "Kolejność" (Quick Edit).</p></div>';
+});
 
 // ================== MINIMALNA INFORMACJA O CIASTECZKACH (WP + WooCommerce) ==================
 // Shortcode: [preomar_cookies_info]
@@ -110,6 +334,8 @@ add_action('init', function(){
                 'post_content' => $p['content']
             ]);
             if ($id && !is_wp_error($id)) {
+                // Ustaw nasz szablon legal
+                update_post_meta($id, '_wp_page_template', 'page-legal.php');
                 // Ustaw opcję jeśli wskazana i pusta
                 if ($p['option'] && !get_option($p['option'])) {
                     update_option($p['option'], $id);
@@ -122,6 +348,25 @@ add_action('init', function(){
             if ($existing && $p['option'] && !get_option($p['option'])) {
                 update_option($p['option'], $existing->ID);
             }
+            // Ustaw nasz szablon legal jeśli jeszcze nie jest
+            if ($existing && get_post_meta($existing->ID, '_wp_page_template', true) !== 'page-legal.php') {
+                update_post_meta($existing->ID, '_wp_page_template', 'page-legal.php');
+            }
+        }
+    }
+    // Jednorazowa naprawa treści gdy wstawiono placeholder "coming soon"
+    $fix_slugs = [
+        'regulamin' => '<h2>Regulamin sklepu</h2><p>(Treść w przygotowaniu. Uzupełnij właściwą treść prawną: definicje, zakres usług, zamówienia, płatności, dostawa, odstąpienie, reklamacje, dane kontaktowe przedsiębiorcy.)</p>',
+        'polityka-poprawnosci' => '<h2>Polityka prywatności</h2><p>(Szkielet – uzupełnij administratora, cele, podstawy prawne, odbiorców, okresy przechowywania, prawa osób.)</p><h3>Ciasteczka techniczne</h3>[preomar_cookies_info]',
+        'kontakt' => '<h2>Kontakt</h2><p>Masz pytania? Skorzystaj z formularza.</p>[preomar_contact_form]'
+    ];
+    foreach ($fix_slugs as $slug => $fallback_html) {
+        $p = get_page_by_path($slug);
+        if (!$p || is_wp_error($p)) continue;
+        $text = strtolower(wp_strip_all_tags($p->post_content));
+        if ($text === '' || strpos($text, 'wielkie rzeczy') !== false || strpos($text, 'coming soon') !== false || strpos($text, 'wkrótce uruchomimy') !== false) {
+            wp_update_post([ 'ID' => $p->ID, 'post_status' => 'publish', 'post_content' => $fallback_html ]);
+            update_post_meta($p->ID, '_wp_page_template', 'page-legal.php');
         }
     }
 });
@@ -130,8 +375,28 @@ add_action('init', function(){
 // ================== SHORTCODE FORMULARZA KONTAKTOWEGO ==================
 add_shortcode('preomar_contact_form', function(){
     ob_start();
+    // Feedback po przekierowaniu
+    $status = isset($_GET['contact']) ? sanitize_text_field($_GET['contact']) : '';
+    $code   = isset($_GET['code']) ? sanitize_text_field($_GET['code']) : '';
+    if ($status === 'ok') {
+        echo '<div class="preomar-contact-alert success">Dziękujemy! Wiadomość została wysłana.</div>';
+    } elseif ($status === 'err') {
+        $msg = 'Nie udało się wysłać wiadomości.';
+        if ($code === 'fields') $msg = 'Uzupełnij wymagane pola: Imię, Email i Wiadomość.';
+        elseif ($code === 'email') $msg = 'Podaj prawidłowy adres e‑mail.';
+        elseif ($code === 'nonce') $msg = 'Upłynął czas sesji. Odśwież stronę i spróbuj ponownie.';
+        elseif ($code === 'send') $msg = 'Wystąpił błąd przy wysyłaniu. Spróbuj ponownie później.';
+        echo '<div class="preomar-contact-alert error">'.esc_html($msg).'</div>';
+    }
+
     echo '<form method="post" action="'.esc_url(admin_url('admin-post.php')).'" class="preomar-contact-form preomar-contact-form-shortcode">';
     echo '<input type="hidden" name="action" value="preomar_simple_contact" />';
+    // Nonce zabezpieczający
+    echo wp_nonce_field('preomar_contact','preomar_contact_nonce', true, false);
+    // Honeypot (ukryte pole – jeżeli wypełnione, to spam)
+    echo '<div style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden" aria-hidden="true" tabindex="-1">'
+        .'<label>Nie wypełniaj tego pola<input type="text" name="preomar_hp" value="" autocomplete="off"></label>'
+        .'</div>';
     echo '<p><label>Imię<br><input type="text" name="name" required></label></p>';
     echo '<p><label>Email<br><input type="email" name="email" required></label></p>';
     echo '<p><label>Wiadomość<br><textarea name="message" rows="5" required></textarea></label></p>';
@@ -139,6 +404,49 @@ add_shortcode('preomar_contact_form', function(){
     echo '</form>';
     return ob_get_clean();
 });
+
+// Obsługa formularza kontaktowego (admin-post.php)
+function preomar_handle_simple_contact(){
+    $redirect = home_url('/kontakt/');
+    // Weryfikacja nonce
+    if (!isset($_POST['preomar_contact_nonce']) || !wp_verify_nonce($_POST['preomar_contact_nonce'], 'preomar_contact')) {
+        wp_safe_redirect(add_query_arg(['contact'=>'err','code'=>'nonce'], $redirect));
+        exit;
+    }
+    // Honeypot – jeżeli bot wypełni, udaj sukces (nic nie wysyłamy)
+    if (!empty($_POST['preomar_hp'])) {
+        wp_safe_redirect(add_query_arg(['contact'=>'ok'], $redirect));
+        exit;
+    }
+
+    $name = sanitize_text_field($_POST['name'] ?? '');
+    $email = sanitize_email($_POST['email'] ?? '');
+    $message = trim(wp_kses_post($_POST['message'] ?? ''));
+
+    if ($name === '' || $email === '' || $message === '') {
+        wp_safe_redirect(add_query_arg(['contact'=>'err','code'=>'fields'], $redirect));
+        exit;
+    }
+    if (!is_email($email)) {
+        wp_safe_redirect(add_query_arg(['contact'=>'err','code'=>'email'], $redirect));
+        exit;
+    }
+
+    $to = get_option('admin_email');
+    $subject = sprintf('Wiadomość z formularza kontaktowego – %s', $name);
+    $body = sprintf("<p><strong>Imię:</strong> %s</p><p><strong>Email:</strong> %s</p><p><strong>Wiadomość:</strong><br>%s</p><hr><p>Strona: %s</p>", esc_html($name), esc_html($email), nl2br(esc_html($message)), esc_url(home_url('/')));
+    $headers = [ 'Content-Type: text/html; charset=UTF-8', 'Reply-To: '. $name .' <'. $email .'>' ];
+
+    $sent = wp_mail($to, $subject, $body, $headers);
+    if ($sent) {
+        wp_safe_redirect(add_query_arg(['contact'=>'ok'], $redirect));
+    } else {
+        wp_safe_redirect(add_query_arg(['contact'=>'err','code'=>'send'], $redirect));
+    }
+    exit;
+}
+add_action('admin_post_nopriv_preomar_simple_contact', 'preomar_handle_simple_contact');
+add_action('admin_post_preomar_simple_contact', 'preomar_handle_simple_contact');
 // =====================================================================
 
 // ================== SHORTCODE: MOJE ZAKUPY (lista kupionych produktów) ==================
@@ -229,13 +537,15 @@ add_shortcode('preomar_purchased_products', function(){
                 $discount_badge = '<span class="discount-badge">-'.intval($percent).'%</span>';
             }
         }
-        // Add to cart link (AJAX capable)
-        $add_classes = 'add-to-cart-btn';
+        // Add to cart link – użyj standardowych klas Woo aby działał AJAX i fragmenty
         $add_url = esc_url( $product->add_to_cart_url() );
         $add_text = esc_html( $product->add_to_cart_text() );
         $add_btn = '';
         if ( $product->is_purchasable() && $product->is_in_stock() ) {
-            $add_btn = '<a href="'.$add_url.'" data-product_id="'.esc_attr($pid).'" data-quantity="1" class="'.$add_classes.'" aria-label="Dodaj do koszyka: '.esc_attr($name).'">'.$add_text.'</a>';
+            // Keep Woo default classes for AJAX + our theme class for styling
+            $classes = [ 'button', 'add_to_cart_button', 'ajax_add_to_cart', 'add-to-cart-btn', 'product_type_'.esc_attr($product->get_type()) ];
+            $attrs = ' href="'.$add_url.'" data-product_id="'.esc_attr($pid).'" data-quantity="1" rel="nofollow" aria-label="Dodaj do koszyka: '.esc_attr($name).'"';
+            $add_btn = '<a class="'.implode(' ', $classes).'"'.$attrs.'>'.$add_text.'</a>';
         }
         echo '<div class="product-card purchased" data-product-id="'.esc_attr($pid).'" data-title="'.esc_attr( mb_strtolower( wp_strip_all_tags( $name ) ) ).'">';
         echo '<a href="'.esc_url($permalink).'" class="product-image-wrapper">';
@@ -291,9 +601,10 @@ function preomar_render_legal_pages_admin(){
     if(!current_user_can('manage_options')) return;
     $updated = false;
     if(isset($_POST['preomar_legal_nonce']) && wp_verify_nonce($_POST['preomar_legal_nonce'],'preomar_legal_save')){
+        // Zapisuj treść pod aktualnym slugi em polityki (polityka-poprawnosci). Jeśli jeszcze jej nie ma – utwórz.
         $map = [
             'regulamin' => ['title'=>'Regulamin','field'=>'preomar_regulamin'],
-            'polityka-prywatnosci' => ['title'=>'Polityka prywatności','field'=>'preomar_polityka'],
+            'polityka-poprawnosci' => ['title'=>'Polityka poprawności','field'=>'preomar_polityka'],
             'kontakt' => ['title'=>'Kontakt','field'=>'preomar_kontakt'],
         ];
         foreach($map as $slug=>$info){
@@ -309,8 +620,10 @@ function preomar_render_legal_pages_admin(){
         }
     }
 
+    // Prefer the new slug polityka-poprawnosci; fall back to the old one if it doesn't exist yet
     $reg = preomar_get_or_create_page('regulamin','Regulamin');
-    $pol = preomar_get_or_create_page('polityka-prywatnosci','Polityka prywatności');
+    $pol = get_page_by_path('polityka-poprawnosci');
+    if (!$pol) { $pol = preomar_get_or_create_page('polityka-prywatnosci','Polityka prywatności'); }
     $kon = preomar_get_or_create_page('kontakt','Kontakt');
     echo '<div class="wrap"><h1>Treści prawne / kontakt</h1><p>Edytuj treści stron. Formularz kontaktowy: użyj shortcode <code>[preomar_contact_form]</code>. Tabela ciasteczek: <code>[preomar_cookies_info]</code>.</p>';
     echo '<form method="post">';
@@ -318,9 +631,9 @@ function preomar_render_legal_pages_admin(){
     echo '<h2>Regulamin</h2>';
     wp_editor($reg? $reg->post_content:'','preomar_regulamin',['textarea_name'=>'preomar_regulamin','textarea_rows'=>12]);
     echo '<p><a target="_blank" href="'.esc_url(get_permalink($reg)).'">Podgląd Regulaminu</a></p>';
-    echo '<h2>Polityka prywatności</h2>';
+    echo '<h2>Polityka poprawności</h2>';
     wp_editor($pol? $pol->post_content:'','preomar_polityka',['textarea_name'=>'preomar_polityka','textarea_rows'=>12]);
-    echo '<p><a target="_blank" href="'.esc_url(get_permalink($pol)).'">Podgląd Polityki prywatności</a></p>';
+    echo '<p><a target="_blank" href="'.esc_url(get_permalink($pol)).'">Podgląd Polityki poprawności</a></p>';
     echo '<h2>Kontakt</h2>';
     wp_editor($kon? $kon->post_content:'','preomar_kontakt',['textarea_name'=>'preomar_kontakt','textarea_rows'=>10]);
     echo '<p><a target="_blank" href="'.esc_url(get_permalink($kon)).'">Podgląd strony kontakt</a></p>';
@@ -371,8 +684,26 @@ function preomar_scripts() {
     wp_enqueue_script('preomar-filters', get_template_directory_uri() . '/assets/js/filters.js', array(), $theme_version, true);
     }
     wp_enqueue_script('preomar-js', get_template_directory_uri() . '/assets/js/main.js', array('jquery'), $theme_version, true);
+    // Hero slider – tylko na stronie głównej
+    if (is_front_page()) {
+        wp_enqueue_script('preomar-hero-slider', get_template_directory_uri() . '/assets/js/hero-slider.js', array(), $theme_version, true);
+    }
     if (function_exists('is_product') && is_product()) {
         wp_enqueue_script('preomar-single-product-qty', get_template_directory_uri() . '/assets/js/single-product-qty.js', array(), $theme_version, true);
+        // AJAX add-to-cart for single product (prevents full page reload -> avoids maintenance page intercept)
+        wp_enqueue_script('preomar-single-add-to-cart-ajax', get_template_directory_uri() . '/assets/js/single-add-to-cart-ajax.js', array('jquery','wc-add-to-cart'), $theme_version, true);
+    }
+    // Subtelne wycentrowanie checkoutu bez zmiany układu
+    if (function_exists('is_checkout') && is_checkout()) {
+        wp_enqueue_style('preomar-checkout-center', get_template_directory_uri() . '/assets/css/checkout-center.css', array('preomar-main'), $theme_version);
+    }
+    // Wymuś skrypt Woo do AJAX add-to-cart na stronie "Moje zakupy"
+    if (function_exists('is_page') && is_page('moje-zakupy')) {
+        wp_enqueue_script('wc-add-to-cart');
+    }
+    // Sell page stylesheet (Sprzedawaj)
+    if (is_page_template('page-sprzedawaj.php') || is_page('sprzedawaj')) {
+        wp_enqueue_style('preomar-sell', get_template_directory_uri() . '/assets/css/sell.css', array('preomar-product-fix'), $theme_version);
     }
     
     // NATYCHMIASTOWA NAPRAWA LOGOWANIA z AJAX - ładuj wszędzie - WERSJA WORKING
@@ -420,8 +751,42 @@ function preomar_scripts() {
     if (is_front_page()) {
         wp_enqueue_script('preomar-categories', get_template_directory_uri() . '/assets/js/categories-loader.js', array(), $theme_version, true);
     }
+    // Styl dla strony Kontakt (tylko na /kontakt/)
+    if (is_page('kontakt')) {
+        wp_enqueue_style('preomar-contact', get_template_directory_uri() . '/assets/css/contact.css', array('preomar-main'), $theme_version);
+    }
 }
 add_action('wp_enqueue_scripts', 'preomar_scripts');
+
+// Do not redirect to cart after add-to-cart (stay on product page)
+add_filter('woocommerce_add_to_cart_redirect', function($url){ return false; });
+add_filter('woocommerce_cart_redirect_after_add', '__return_false');
+// Also prevent redirect on error (e.g., quantity/stock errors)
+add_filter('woocommerce_cart_redirect_after_error', '__return_false');
+
+// Whitelist WooCommerce AJAX endpoints from any maintenance/coming-soon interception
+add_action('init', function(){
+    if (isset($_GET['wc-ajax'])) {
+        // Avoid auth_redirect or similar
+        remove_action('template_redirect', 'auth_redirect');
+        // Strip typical maintenance callbacks early
+        add_action('template_redirect', function(){
+            global $wp_filter;
+            if (empty($wp_filter['template_redirect'])) return;
+            $patterns = [ 'maint', 'coming', 'soon', 'under', 'construction', 'seedprod', 'cmp', 'comingsoon' ];
+            foreach ($wp_filter['template_redirect']->callbacks as $prio => $callbacks) {
+                foreach ($callbacks as $id => $cb) {
+                    $fn = $cb['function']; $name='';
+                    if (is_string($fn)) { $name = $fn; }
+                    elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+                    elseif ($fn instanceof Closure) { $name = 'Closure@template_redirect'; }
+                    $low = strtolower($name);
+                    foreach($patterns as $p){ if ($low !== '' && strpos($low, $p) !== false) { remove_action('template_redirect', $cb['function'], $prio); break; } }
+                }
+            }
+        }, -10000);
+    }
+}, 0);
 
 // Widgets
 function preomar_widgets_init() {
@@ -573,6 +938,96 @@ if (!function_exists('preomar_debug_product_page')) {
         }
     }, 1);
 }
+
+    // BEZPIECZNY BYPASS dla "coming soon"/maintenance lub przymusowych ekranów logowania na stronie pojedynczego produktu
+    // Cel: gdy goście lub nieadmini widzą zamiast produktu ekran "wkrótce" (z wtyczki), wymuś render prawdziwego szablonu produktu.
+    // Działa bardzo wcześnie w template_redirect, ale tylko dla zwykłych wejść GET (nie przeszkadza w add-to-cart itp.).
+    // (Wyłączono wcześniejszy bypass maintenance dla single product – wracamy do standardowego renderowania)
+
+    // (Nie usuwamy hooków maintenance – pełny powrót do wcześniejszej logiki)
+
+    // Wymuś prawidłowy szablon single-product nawet jeśli wtyczka maintenance próbuje go podmienić
+    add_filter('template_include', function($template){
+        if (function_exists('is_singular') && is_singular('product')) {
+            $pref = locate_template(['woocommerce/single-product.php','single-product.php']);
+            if ($pref) {
+                // Debug marker do HTML (podgląd w źródle)
+                add_action('wp_footer', function() use ($pref){ echo '<!-- PREOMAR FORCE_SINGLE_PRODUCT tpl='.esc_html(basename($pref)).' -->'; });
+                return $pref;
+            }
+        }
+        return $template;
+    }, 1000);
+
+    // HARDEN: Wymuś widoczność stron sklepu mimo trybu Maintenance/Coming-Soon (dla użytkowników nie-admin)
+    add_action('template_redirect', function(){
+        // Krytyczne strony sklepu
+        $is_shop_critical = (function_exists('is_cart') && is_cart())
+            || (function_exists('is_checkout') && is_checkout())
+            || (function_exists('is_singular') && is_singular('product'))
+            || (function_exists('is_shop') && is_shop())
+            || (function_exists('is_product_category') && is_product_category())
+            || (function_exists('is_product_tag') && is_product_tag());
+        if (!$is_shop_critical) return;
+
+        // Usuń podejrzane callbacki maintenance/coming-soon z template_redirect
+        global $wp_filter;
+        if (!empty($wp_filter['template_redirect'])) {
+            $patterns = [ 'maint', 'coming', 'soon', 'under', 'construction', 'seedprod', 'cmp', 'comingsoon' ];
+            foreach ($wp_filter['template_redirect']->callbacks as $prio => $callbacks) {
+                foreach ($callbacks as $id => $cb) {
+                    $fn = $cb['function']; $name='';
+                    if (is_string($fn)) { $name = $fn; }
+                    elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+                    elseif ($fn instanceof Closure) { $name = 'Closure@template_redirect'; }
+                    $low = strtolower($name);
+                    foreach($patterns as $p){
+                        if ($low !== '' && strpos($low, $p) !== false) {
+                            remove_action('template_redirect', $cb['function'], $prio);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }, -10000);
+
+    // ALSO enforce cart template include very late (in case a plugin still tries to swap it)
+    add_filter('template_include', function($template){
+        if ((function_exists('is_cart') && is_cart()) || (is_page('koszyk'))) {
+            $tpl = get_template_directory() . '/page-koszyk.php';
+            if (file_exists($tpl)) {
+                add_action('wp_footer', function(){ echo '<!-- PREOMAR FORCE_CART_TEMPLATE -->'; });
+                return $tpl;
+            }
+        }
+        return $template;
+    }, 99999);
+
+    // ULTRA-EARLY BYPASS: render cart page for logged-in users even if maintenance tries to hijack
+    add_action('template_redirect', function(){
+        // Only for logged-in non-admins and regular users; admins already see everything
+        if (!is_user_logged_in()) return;
+        $is_cart_req = (function_exists('is_cart') && is_cart()) || is_page('koszyk');
+        if (!$is_cart_req && isset($_SERVER['REQUEST_URI'])) {
+            $path = $_SERVER['REQUEST_URI'];
+            // Fallback detection by path (handles XAMPP /wordpress/ prefix too)
+            if (stripos($path, '/koszyk') !== false) { $is_cart_req = true; }
+        }
+        if ($is_cart_req) {
+            // Avoid auth_redirect edge cases
+            remove_action('template_redirect', 'auth_redirect');
+            $tpl = get_template_directory() . '/page-koszyk.php';
+            if (file_exists($tpl)) {
+                status_header(200);
+                nocache_headers();
+                // Mark in HTML for debug
+                add_action('wp_head', function(){ echo '<!-- PREOMAR CART_EARLY_BYPASS -->'; });
+                include $tpl;
+                exit;
+            }
+        }
+    }, -20000);
 function preomar_woocommerce_customization() {
     // Remove default WooCommerce wrappers
     remove_action('woocommerce_before_main_content', 'woocommerce_output_content_wrapper', 10);
@@ -611,8 +1066,70 @@ add_action('wp', function(){
     }
 }, 20);
 
+// Uprawnienia: pozwól klientom zgłaszać produkty do moderacji (pending)
+add_action('init', function(){
+    foreach (['customer','subscriber'] as $role_name) {
+        $role = get_role($role_name);
+        if ($role) {
+            foreach (['upload_files','create_products','edit_products','delete_products'] as $cap) {
+                if (!$role->has_cap($cap)) {
+                    $role->add_cap($cap);
+                }
+            }
+        }
+    }
+}, 11);
+
+// Globalnie ukryj produkty wyprzedane z katalogu (zachowaj strony pojedyncze)
+add_action('init', function(){
+    if (get_option('woocommerce_hide_out_of_stock_items') !== 'yes') {
+        update_option('woocommerce_hide_out_of_stock_items', 'yes');
+    }
+});
+
+// Dodatkowa asekuracja: wyklucz outofstock w głównej pętli katalogu (shop, kategorie, tagi, wyszukiwarka Woo)
+add_action('pre_get_posts', function($q){
+    if (is_admin() || !$q->is_main_query()) return;
+    // Nie dotykaj stron pojedynczych produktów ani stron statycznych
+    if ($q->is_singular) return;
+
+    $is_catalog = false;
+    if (function_exists('is_woocommerce') && is_woocommerce()) $is_catalog = true;
+    if (function_exists('is_shop') && is_shop()) $is_catalog = true;
+    if (function_exists('is_product_category') && is_product_category()) $is_catalog = true;
+    if (function_exists('is_product_tag') && is_product_tag()) $is_catalog = true;
+    if ($q->get('post_type') === 'product') $is_catalog = true;
+
+    if (!$is_catalog) return;
+
+    $meta_query = (array) $q->get('meta_query');
+    $meta_query[] = [
+        'key' => '_stock_status',
+        'value' => 'outofstock',
+        'compare' => '!=',
+    ];
+    $q->set('meta_query', $meta_query);
+});
+
 // Wrapper start
 function preomar_wrapper_start() {
+    // Bezpieczna naprawa treści tylko dla strony "Regulamin"
+    if (function_exists('is_page') && is_page()) {
+        $p = get_post();
+        if ($p instanceof WP_Post) {
+            $slug = isset($p->post_name) ? $p->post_name : '';
+            if ($slug === 'regulamin') {
+                $raw = isset($p->post_content) ? (string) $p->post_content : '';
+                $txt = strtolower(wp_strip_all_tags($raw));
+                if ($txt === '' || strpos($txt, 'wielkie rzeczy') !== false || strpos($txt, 'coming soon') !== false || strpos($txt, 'wkrótce uruchomimy') !== false) {
+                    wp_update_post([
+                        'ID' => $p->ID,
+                        'post_content' => '<h2>Regulamin sklepu</h2><p>(Treść w przygotowaniu. Uzupełnij właściwą treść prawną: definicje, zakres usług, zamówienia, płatności, dostawa, odstąpienie, reklamacje, dane kontaktowe przedsiębiorcy.)</p>'
+                    ]);
+                }
+            }
+        }
+    }
     echo '<div class="shop-container"><main class="shop-content">';
 }
 
@@ -730,6 +1247,17 @@ function preomar_wishlist_init() {
 }
 add_action('init', 'preomar_wishlist_init');
 
+// Body class: add 'shop-empty' when on shop archive and no products
+add_filter('body_class', function($classes){
+    if( (is_post_type_archive('product') || is_shop() || is_product_category() || is_product_tag()) && function_exists('wc_get_loop_prop')){
+        global $wp_query; 
+        if(isset($wp_query) && (int)$wp_query->found_posts === 0){
+            $classes[] = 'shop-empty';
+        }
+    }
+    return $classes;
+});
+
 // Shortcode i strona "Obserwowane" (wykorzystuje istniejącą meta 'wishlist')
 add_action('init', function() {
     // Rejestruj shortcode
@@ -748,7 +1276,7 @@ add_action('init', function() {
 
 function preomar_render_wishlist_page() {
     if (!is_user_logged_in()) {
-        return '<div class="wishlist-login-prompt"><p>Musisz być zalogowany aby zobaczyć obserwowane produkty.</p><a class="login-btn" href="' . esc_url(wp_login_url(get_permalink())) . '">Zaloguj się</a></div>';
+        return '<div class="wishlist-login-prompt"><p>Musisz być zalogowany aby zobaczyć obserwowane produkty.</p><a class="login-btn" href="' . esc_url( home_url('/moje-konto/') ) . '">Zaloguj się</a></div>';
     }
     $wishlist = get_user_meta(get_current_user_id(), 'wishlist', true);
     if (empty($wishlist) || !is_array($wishlist)) {
@@ -806,11 +1334,18 @@ function preomar_hide_obserwowane_title($title,$post_id){
 }
     global $product;
     if (!$product) return;
+
+    // Gość: pokaż link do logowania zamiast przycisku obserwowania (bez ikonek)
+    if (!is_user_logged_in()) {
+        $login_url = class_exists('WooCommerce') ? wc_get_page_permalink('myaccount') : wp_login_url();
+        echo '<a class="follow-product-btn login-required" href="' . esc_url($login_url) . '"><span class="text">Zaloguj się, aby obserwować</span></a>';
+        return;
+    }
     $wishlist = is_user_logged_in() ? get_user_meta(get_current_user_id(), 'wishlist', true) : [];
     $in = is_array($wishlist) && in_array($product->get_id(), $wishlist);
     $label = $in ? 'Obserwujesz' : 'Obserwuj';
     echo '<button class="follow-product-btn ' . ($in? 'is-following':'') . '" data-product-id="' . esc_attr($product->get_id()) . '">'
-        . '<span class="icon">' . ($in? '★':'☆') . '</span> <span class="text">' . esc_html($label) . '</span></button>';
+        . '<span class="text">' . esc_html($label) . '</span></button>';
 }
 
 // Usuń zakładkę opinie (reviews)
@@ -913,13 +1448,49 @@ function preomar_remove_from_wishlist() {
 // Dodaj przycisk wishlist
 function preomar_add_wishlist_button() {
     global $product;
-    
+    // Tylko dla zalogowanych – gościom nie pokazuj przycisku serca na listach
+    if (!is_user_logged_in()) return;
+
     $wishlist = get_user_meta(get_current_user_id(), 'wishlist', true);
     $is_in_wishlist = is_array($wishlist) && in_array($product->get_id(), $wishlist);
-    
+
     echo '<button class="wishlist-btn ' . ($is_in_wishlist ? 'in-wishlist' : '') . '" data-product-id="' . $product->get_id() . '" title="' . ($is_in_wishlist ? 'Usuń z listy życzeń' : 'Dodaj do listy życzeń') . '">❤️</button>';
 }
 add_action('woocommerce_after_shop_loop_item', 'preomar_add_wishlist_button', 15);
+
+// === BLOKADA KOSZYKA I OBSERWOWANIA DLA NIEZALOGOWANYCH ===
+// 1) Serwerowo: zablokuj dodanie do koszyka dla gości
+add_filter('woocommerce_add_to_cart_validation', function($passed, $product_id, $quantity){
+    if (!is_user_logged_in()) {
+        if (function_exists('wc_add_notice')) {
+            wc_add_notice(__('Zaloguj się, aby dodać produkt do koszyka.', 'preomar'), 'notice');
+        }
+        return false;
+    }
+    return $passed;
+}, 10, 3);
+
+// 2) Ukryj / podmień przyciski "Dodaj do koszyka" w listach dla gości
+add_filter('woocommerce_loop_add_to_cart_link', function($html, $product){
+    if (!is_user_logged_in()) {
+        $login_url = class_exists('WooCommerce') ? wc_get_page_permalink('myaccount') : wp_login_url();
+        return '<a class="button login-required" href="' . esc_url($login_url) . '">' . esc_html__('Zaloguj się, aby kupić', 'preomar') . '</a>';
+    }
+    return $html;
+}, 10, 2);
+
+// 3) Na stronie produktu: usuń formularz koszyka i pokaż CTA logowania dla gości
+add_action('wp', function(){
+    if (function_exists('is_product') && is_product() && !is_user_logged_in()) {
+        // Usuń standardowy przycisk dodania do koszyka (i formularz z ilością)
+        remove_action('woocommerce_single_product_summary', 'woocommerce_template_single_add_to_cart', 30);
+        // Wstaw przycisk logowania w tym samym miejscu
+        add_action('woocommerce_single_product_summary', function(){
+            $login_url = class_exists('WooCommerce') ? wc_get_page_permalink('myaccount') : wp_login_url();
+            echo '<a class="button single_add_to_cart_button login-required" href="' . esc_url($login_url) . '">' . esc_html__('Zaloguj się, aby dodać do koszyka', 'preomar') . '</a>';
+        }, 30);
+    }
+});
 
 // Dodaj breadcrumbs
 function preomar_breadcrumbs() {
@@ -936,6 +1507,16 @@ function preomar_breadcrumbs() {
         ));
     }
 }
+
+// Ukryj breadcrumbs na stronie pojedynczego produktu
+add_action('wp', function(){
+    if (function_exists('is_product') && is_product()) {
+        // Domyślne okruszki WooCommerce
+        remove_action('woocommerce_before_main_content', 'woocommerce_breadcrumb', 20);
+        // Na wypadek gdyby nasza funkcja była gdzieś podpięta
+        remove_action('woocommerce_before_main_content', 'preomar_breadcrumbs', 20);
+    }
+}, 5);
 
 // Dodaj obsługę porównywania produktów
 function preomar_compare_init() {
@@ -1071,6 +1652,45 @@ function preomar_cart_page_body_class($classes) {
 }
 add_filter('body_class', 'preomar_cart_page_body_class');
 
+// Ominięcie placeholdera na stronie koszyka przed załadowaniem contentu (jeżeli jakaś wtyczka nadpisuje the_content)
+add_action('template_redirect', function(){
+    // Blokada dostępu do koszyka dla niezalogowanych – szybki redirect
+    if ( function_exists('is_page') && ! is_user_logged_in() && ( is_page('koszyk') || is_page('sprzedawaj') || is_page('obserwowane') ) ) {
+        // Przekieruj do strony logowania (konto) z parametrem powrotu
+        $login = get_permalink( get_option('woocommerce_myaccount_page_id') );
+        if ($login) {
+            $slug = 'koszyk';
+            if ( is_page('sprzedawaj') ) $slug = 'sprzedawaj';
+            elseif ( is_page('obserwowane') ) $slug = 'obserwowane';
+            wp_safe_redirect( add_query_arg('redirect_to',$slug,$login) );
+            exit;
+        }
+    }
+    if ( function_exists('is_page') && is_page('koszyk') ) {
+        $cart_id = get_the_ID();
+        $raw = get_post_field('post_content', $cart_id);
+        $plain = strtolower( trim( wp_strip_all_tags( $raw ) ) );
+        $is_placeholder = ($plain === '' || strpos($plain,'wielkie rzeczy') !== false || strpos($plain,'coming soon') !== false || strpos($plain,'wkrótce uruchomimy') !== false);
+        if ( $is_placeholder ) {
+            // Wymuś natychmiastowy własny minimalny render koszyka
+            status_header(200); nocache_headers();
+            echo '<!DOCTYPE html><html '; language_attributes(); echo '><head><meta charset="'; bloginfo('charset'); echo '"><meta name="viewport" content="width=device-width,initial-scale=1">';
+            wp_head();
+            echo '</head><body class="woocommerce-cart woocommerce-page preomar-cart-bypass">';
+            // Nagłówek motywu
+            if ( function_exists('wp_body_open') ) wp_body_open();
+            // Spróbuj wczytać nagłówek szablonu jeśli istnieje
+            get_header();
+            echo '<main class="site-main preomar-cart-main" style="max-width:1180px;margin:60px auto 80px;padding:0 20px;">';
+            echo do_shortcode('[woocommerce_cart]');
+            echo '</main>';
+            get_footer();
+            echo '</body></html>';
+            exit;
+        }
+    }
+}, 1); // bardzo wcześnie
+
 // Dodaj przycisk porównywania
 function preomar_add_compare_button() {
     global $product;
@@ -1113,6 +1733,22 @@ function preomar_setup_cart_page() {
     } else {
         // Strona istnieje, upewnij się że ma poprawne ustawienia
         $cart_page_id = $cart_page->ID;
+        // Jeśli treść wygląda jak placeholder "Wielkie rzeczy..." albo brak shortcode – napraw
+        $raw = (string) $cart_page->post_content;
+        $plain = strtolower( trim( wp_strip_all_tags( $raw ) ) );
+        $needs_fix = false;
+        if ($plain === '' || strpos($plain,'wielkie rzeczy') !== false || strpos($plain,'coming soon') !== false || strpos($plain,'wkrótce uruchomimy') !== false) {
+            $needs_fix = true;
+        }
+        if ( ! has_shortcode( $raw, 'woocommerce_cart' ) ) {
+            $needs_fix = true;
+        }
+        if ( $needs_fix ) {
+            wp_update_post([
+                'ID' => $cart_page_id,
+                'post_content' => '[woocommerce_cart]'
+            ]);
+        }
         
         // Ustaw jako stronę koszyka WooCommerce jeśli nie jest
         if (class_exists('WooCommerce') && get_option('woocommerce_cart_page_id') != $cart_page_id) {
@@ -1296,7 +1932,388 @@ add_action('parse_request', function($wp) {
         $wp->matched_rule = 'koszyk/?$';
         $wp->matched_query = 'pagename=koszyk';
     }
+    // Fallback dla stron prawnych – działają nawet bez pretty permalinks
+    if (isset($wp->request) && in_array($wp->request, ['regulamin','regulamin/','polityka-poprawnosci','polityka-poprawnosci/','kontakt','kontakt/'], true)) {
+        $slug = rtrim($wp->request, '/');
+        $wp->query_vars['pagename'] = $slug;
+        $wp->matched_rule = $slug.'/?$';
+        $wp->matched_query = 'pagename='.$slug;
+    }
 });
+
+// ====== CHECKOUT: silny bypass i konfiguracja (jak dla koszyka) ======
+// Ultra-late template include for checkout (avoid maintenance hijack)
+add_filter('template_include', function($template){
+    if ((function_exists('is_checkout') && is_checkout()) || is_page('zamowienie')) {
+        // Nie nadpisuj strony "zamówienie otrzymane"/"order-pay"
+        if (function_exists('is_order_received_page') && is_order_received_page()) return $template;
+        if (function_exists('is_checkout_pay_page') && is_checkout_pay_page()) return $template;
+        $tpl = get_template_directory() . '/page-zamowienie.php';
+        if (file_exists($tpl)) {
+            add_action('wp_footer', function(){ echo '<!-- PREOMAR FORCE_CHECKOUT_TEMPLATE -->'; });
+            return $tpl;
+        }
+    }
+    return $template;
+}, 99999);
+
+// Ultra-early include+exit for checkout for zalogowani (omijaj maintenance)
+add_action('template_redirect', function(){
+    if (!is_user_logged_in()) return;
+    $is_co = (function_exists('is_checkout') && is_checkout()) || is_page('zamowienie');
+    if (!$is_co && isset($_SERVER['REQUEST_URI'])) {
+        $p = $_SERVER['REQUEST_URI'];
+        if (stripos($p, '/zamowienie') !== false || stripos($p, '/checkout') !== false) { $is_co = true; }
+    }
+    if ($is_co) {
+        remove_action('template_redirect', 'auth_redirect');
+        $tpl = get_template_directory() . '/page-zamowienie.php';
+        if (file_exists($tpl)) {
+            status_header(200); nocache_headers(); add_action('wp_head', function(){ echo '<!-- PREOMAR CHECKOUT_EARLY_BYPASS -->'; }); include $tpl; exit;
+        }
+    }
+}, -20000);
+
+// Rewrite rule /zamowienie/ and unify checkout URL
+add_action('init', function(){ add_rewrite_rule('^zamowienie/?$', 'index.php?pagename=zamowienie', 'top'); });
+add_filter('woocommerce_get_checkout_url', function($url){ return home_url('/zamowienie/'); });
+
+// CHECKOUT: otocz formularz checkout dedykowanym kontenerem o stałej szerokości (łatwe centrowanie)
+add_action('woocommerce_before_checkout_form', function(){
+    echo '<div class="preomar-checkout-container">';
+}, 1);
+add_action('woocommerce_after_checkout_form', function(){
+    echo '</div>';
+}, 9999);
+
+// Wymuś szybkie centrowanie kontenera (inline CSS) – działa nawet przy twardym cache przeglądarki
+add_action('wp_head', function(){
+    if (function_exists('is_checkout') && is_checkout()) {
+        echo '<style>.preomar-checkout-container{max-width:1080px;margin-left:auto;margin-right:auto;padding-left:16px;padding-right:16px}</style>';
+    }
+}, 99);
+
+// Zmiana URL podstrony polityki na /polityka-poprawnosci/ (+redirect ze starego /polityka-prywatnosci/)
+add_action('init', function(){
+    if (get_transient('preomar_policy_slug_migrated')) return;
+    // Znajdź stronę polityki: po opcji lub po slugu
+    $policy_id = (int) get_option('wp_page_for_privacy_policy');
+    $page = $policy_id ? get_post($policy_id) : get_page_by_path('polityka-prywatnosci');
+    if ($page && !is_wp_error($page)) {
+        $desired = 'polityka-poprawnosci';
+        // Jeśli nie ma już strony o docelowym slugu – zmień slug bieżącej
+        $existing = get_page_by_path($desired);
+        if (!$existing) {
+            wp_update_post([ 'ID' => $page->ID, 'post_name' => $desired, 'post_status' => 'publish' ]);
+            // Ustaw tę stronę jako stronę polityki prywatności w ustawieniach WordPress
+            update_option('wp_page_for_privacy_policy', $page->ID);
+            // Po zmianie slugu odśwież rewrite rules (raz)
+            flush_rewrite_rules();
+        }
+        set_transient('preomar_policy_slug_migrated', 1, DAY_IN_SECONDS);
+    }
+});
+
+// 301 Redirect: /polityka-prywatnosci/ -> /polityka-poprawnosci/
+add_action('template_redirect', function(){
+    if (!isset($_SERVER['REQUEST_URI'])) return;
+    $uri = $_SERVER['REQUEST_URI'];
+    if (stripos($uri, 'polityka-prywatnosci') !== false) {
+        wp_redirect(home_url('/polityka-poprawnosci/'), 301);
+        exit;
+    }
+});
+
+// Ensure legal pages are public/published for guests (avoid 404 when status is private/draft)
+add_action('init', function(){
+    $changed = false;
+    foreach (['regulamin','polityka-poprawnosci','kontakt'] as $slug) {
+        $p = get_page_by_path($slug);
+        if ($p && !is_wp_error($p)) {
+            if ($p->post_status !== 'publish') {
+                wp_update_post(['ID'=>$p->ID, 'post_status'=>'publish']);
+                $changed = true;
+            }
+        }
+    }
+    // Make sure WP knows which page is the privacy policy
+    $pp = get_page_by_path('polityka-poprawnosci');
+    if ($pp && !is_wp_error($pp)) {
+        if ((int)get_option('wp_page_for_privacy_policy') !== (int)$pp->ID) {
+            update_option('wp_page_for_privacy_policy', $pp->ID);
+            $changed = true;
+        }
+    }
+    if ($changed && !get_transient('preomar_legal_rules_flushed')) {
+        flush_rewrite_rules();
+        set_transient('preomar_legal_rules_flushed', 1, HOUR_IN_SECONDS);
+    }
+}, 12);
+
+// Manual fixer: go to /wp-admin/?preomar_fix_regulamin=1 (admin only) to replace placeholder content
+add_action('admin_init', function(){
+    if (!current_user_can('manage_options')) return;
+    if (!isset($_GET['preomar_fix_regulamin'])) return;
+    $p = get_page_by_path('regulamin');
+    if ($p && !is_wp_error($p)) {
+        wp_update_post([
+            'ID' => $p->ID,
+            'post_status' => 'publish',
+            'post_content' => '<h2>Regulamin sklepu</h2><p>(Treść w przygotowaniu. Uzupełnij właściwą treść prawną: definicje, zakres usług, zamówienia, płatności, dostawa, odstąpienie, reklamacje, dane kontaktowe przedsiębiorcy.)</p>'
+        ]);
+        update_post_meta($p->ID, '_wp_page_template', 'page-legal.php');
+        wp_safe_redirect( get_permalink($p) );
+        exit;
+    }
+});
+
+// ====== LEGAL PAGES BYPASS (Regulamin / Polityka prywatności / Kontakt) ======
+// Ultra-early include+exit – zawsze pokaż prawdziwy szablon strony, nawet jeśli maintenance próbuje przejąć
+add_action('template_redirect', function(){
+    if (!function_exists('is_page')) return;
+    $is_legal = is_page(array('regulamin','polityka-prywatnosci','polityka-poprawnosci','kontakt'));
+    if (!$is_legal) return;
+    // Usuń auth redirect i ewentualne maintenance
+    remove_action('template_redirect','auth_redirect');
+    // Renderuj bezpośrednio i wyjdź
+    // Prefer our dedicated legal template to avoid any injected content
+    $tpl = get_template_directory() . '/page-legal.php';
+    if (!file_exists($tpl)) {
+        // Fallbacks
+        $fallback = locate_template('page.php');
+        $tpl = $fallback ? $fallback : get_query_template('page');
+    }
+    if ($tpl && file_exists($tpl)) {
+        status_header(200); nocache_headers();
+        add_action('wp_head', function(){ echo '<!-- PREOMAR LEGAL_EARLY_BYPASS -->'; });
+        include $tpl; exit;
+    }
+}, -20000);
+
+// Late fallback: nawet jeśli wtyczka próbuje nadpisać template_include, wymuś page.php
+add_filter('template_include', function($template){
+    if (function_exists('is_page') && is_page(array('regulamin','polityka-prywatnosci','polityka-poprawnosci','kontakt'))) {
+        $tpl = locate_template('page-legal.php');
+        if ($tpl) {
+            add_action('wp_footer', function(){ echo '<!-- PREOMAR LEGAL_FORCE_TEMPLATE page-legal.php -->'; });
+            return $tpl;
+        }
+    }
+    return $template;
+}, 99999);
+
+// 3) Ostateczny bezpiecznik: nadpisz wynik the_content na tych stronach (z zachowaniem shortcode + formatowania)
+add_filter('the_content', function($content){
+    if (function_exists('is_page') && is_page(array('regulamin','polityka-prywatnosci','polityka-poprawnosci','kontakt'))) {
+        $raw = get_post_field('post_content', get_the_ID());
+        // Jeśli Regulamin ma placeholder „coming soon” albo jest pusty – pokaż sensowny szkic regulaminu
+        $is_placeholder = false;
+        if (is_page('regulamin')) {
+            $txt = strtolower(wp_strip_all_tags($raw));
+            if (trim($txt) === '' || strpos($txt, 'wielkie rzeczy') !== false || strpos($txt, 'coming soon') !== false) {
+                $is_placeholder = true;
+            }
+        }
+        if ($is_placeholder) {
+            $raw = '<h2>Regulamin sklepu</h2>'
+                 . '<p>(Treść w przygotowaniu. Uzupełnij właściwą treść prawną: definicje, zakres usług, zamówienia, płatności, dostawa, odstąpienie, reklamacje, dane kontaktowe przedsiębiorcy.)</p>';
+        }
+        // Przepuść przez shortcody i auto-paragrafy; bez innych filtrów wtyczek
+        $raw = do_shortcode($raw);
+        $raw = wpautop($raw);
+        return $raw;
+    }
+    return $content;
+}, PHP_INT_MAX);
+
+// ====== PUBLICZNE PODSTRONY (Regulamin / Polityka / Kontakt): obejście maintenance i podmian treści ======
+// 1) Usuń podejrzane przekierowania maintenance na tych stronach
+add_action('template_redirect', function(){
+    if (!function_exists('is_page')) return;
+    if (!is_page(array('regulamin','polityka-prywatnosci','polityka-poprawnosci','kontakt'))) return;
+    // Usuń potencjalne przymusowe logowanie
+    remove_action('template_redirect','auth_redirect');
+    // Usuń podejrzane callbacki maintenance/coming soon
+    global $wp_filter;
+    if (!empty($wp_filter['template_redirect'])) {
+        $patterns = [ 'maint', 'coming', 'soon', 'under', 'construction', 'seedprod', 'cmp', 'comingsoon' ];
+        foreach ($wp_filter['template_redirect']->callbacks as $prio => $callbacks) {
+            foreach ($callbacks as $id => $cb) {
+                $fn = $cb['function']; $name='';
+                if (is_string($fn)) { $name = $fn; }
+                elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+                elseif ($fn instanceof Closure) { $name = 'Closure@template_redirect'; }
+                $low = strtolower($name);
+                foreach($patterns as $p){ if ($low !== '' && strpos($low, $p) !== false) { remove_action('template_redirect', $cb['function'], $prio); break; } }
+            }
+        }
+    }
+}, -10000);
+
+// 2) Usuń podmianę zawartości (the_content) przez wtyczki typu "coming soon" na tych stronach
+add_action('wp', function(){
+    if (!function_exists('is_page')) return;
+    if (!is_page(array('regulamin','polityka-prywatnosci','polityka-poprawnosci','kontakt'))) return;
+    // Najprościej: usuń WSZYSTKIE filtry the_content, a następnie dodaj nasz minimalny render (shortcode + autop)
+    remove_all_filters('the_content');
+    add_filter('the_content', function($unused){
+        $raw = get_post_field('post_content', get_the_ID());
+        return wpautop(do_shortcode($raw));
+    }, 0);
+}, 0);
+
+// ====== KOSZYK: diagnostyka i agresywne czyszczenie filtrów mogących wstawiać placeholder ======
+// 1) Debug URL: /koszyk/?preomar_cart_debug=1 – wypisuje surową treść i listę filtrów the_content
+add_action('template_redirect', function(){
+    if ( function_exists('is_page') && is_page('koszyk') && isset($_GET['preomar_cart_debug']) ) {
+        global $wp_filter;
+        header('Content-Type: text/plain; charset=utf-8');
+        $cart_id = get_the_ID();
+        $raw = get_post_field('post_content', $cart_id);
+        echo "=== PREOMAR CART DEBUG ===\n";
+        echo 'Post ID: ' . $cart_id . "\nSlug: koszyk\n";
+        echo "Has shortcode [woocommerce_cart]? " . ( has_shortcode($raw,'woocommerce_cart') ? 'YES' : 'NO' ) . "\n\n";
+        echo "--- Raw post_content (as stored) ---\n" . $raw . "\n\n";
+        echo "--- Stripped text ---\n" . strtolower(trim(wp_strip_all_tags($raw))) . "\n\n";
+        echo "--- the_content filters (priority => callback) ---\n";
+        if ( isset($wp_filter['the_content']) ) {
+            foreach ($wp_filter['the_content']->callbacks as $prio => $cbs) {
+                foreach ($cbs as $id => $cb) {
+                    $fn = $cb['function']; $name='';
+                    if (is_string($fn)) { $name = $fn; }
+                    elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+                    elseif ($fn instanceof Closure) { $name = 'Closure'; }
+                    echo $prio . ' => ' . $name . "\n";
+                }
+            }
+        } else {
+            echo "(brak filtrów)\n";
+        }
+        echo "\n=== END DEBUG ===";
+        exit;
+    }
+}, 0);
+
+// 2) Usuń podejrzane filtry maintenance / coming soon z template_redirect dla koszyka (jak dla stron prawnych)
+add_action('template_redirect', function(){
+    if ( ! function_exists('is_page') || ! is_page('koszyk') ) return;
+    global $wp_filter;
+    if (!empty($wp_filter['template_redirect'])) {
+        $patterns = [ 'maint', 'coming', 'soon', 'under', 'construction', 'seedprod', 'cmp', 'comingsoon' ];
+        foreach ($wp_filter['template_redirect']->callbacks as $prio => $callbacks) {
+            foreach ($callbacks as $id => $cb) {
+                $fn = $cb['function']; $name='';
+                if (is_string($fn)) { $name = $fn; }
+                elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+                elseif ($fn instanceof Closure) { $name = 'Closure@template_redirect'; }
+                $low = strtolower($name);
+                foreach($patterns as $p){ if ($low !== '' && strpos($low, $p) !== false) { remove_action('template_redirect', $cb['function'], $prio); break; } }
+            }
+        }
+    }
+}, -10050); // tuż przed prawnymi (-10000)
+
+// 3) Wczesne czyszczenie filtrów the_content dla koszyka z podejrzanych wtyczek bez kasowania naszych
+add_action('wp', function(){
+    if ( ! function_exists('is_page') || ! is_page('koszyk') ) return;
+    global $wp_filter;
+    if ( empty($wp_filter['the_content']) ) return;
+    $patterns = [ 'coming', 'soon', 'maint', 'construction', 'seedprod', 'cmp', 'underconstruction' ];
+    foreach ($wp_filter['the_content']->callbacks as $prio => $callbacks) {
+        foreach ($callbacks as $id => $cb) {
+            $fn = $cb['function']; $name='';
+            if (is_string($fn)) { $name = $fn; }
+            elseif (is_array($fn)) { $name = (is_object($fn[0])? get_class($fn[0]) : (string)$fn[0]) . '::' . (string)$fn[1]; }
+            elseif ($fn instanceof Closure) { $name = 'Closure@the_content'; }
+            $low = strtolower($name);
+            foreach($patterns as $p){ if ($low !== '' && strpos($low,$p)!==false) { remove_filter('the_content', $cb['function'], $prio); break; } }
+        }
+    }
+}, 0);
+
+// 4) Ostateczne zabezpieczenie: jeśli po wszystkich filtrach treść nadal wygląda jak placeholder – wymuś shortcode
+add_filter('the_content', function($content){
+    if ( function_exists('is_page') && is_page('koszyk') ) {
+        $plain = strtolower(trim(wp_strip_all_tags($content)));
+        if ($plain === '' || strpos($plain,'wielkie rzeczy') !== false || strpos($plain,'coming soon') !== false || strpos($plain,'wkrótce uruchomimy') !== false) {
+            $content = '[woocommerce_cart]';
+        }
+        // Upewnij się że jest shortcode (jeśli nie – dodaj na końcu)
+        if ( strpos($content,'[woocommerce_cart') === false ) {
+            $content .= "\n[woocommerce_cart]";
+        }
+        // Renderuj ręcznie, aby ominąć dalsze filtry nadpisujące
+        return do_shortcode($content);
+    }
+    return $content;
+}, PHP_INT_MAX - 1000); // bardzo późno, ale jeszcze przed absolutnym MAX
+
+// Ensure checkout page exists and is assigned
+function preomar_setup_checkout_page(){
+    $co_page = get_page_by_path('zamowienie');
+    if (!$co_page) {
+        $id = wp_insert_post([
+            'post_title'   => 'Zamówienie',
+            'post_name'    => 'zamowienie',
+            'post_content' => '[woocommerce_checkout]',
+            'post_status'  => 'publish',
+            'post_type'    => 'page',
+            'post_author'  => 1,
+            'meta_input'   => ['_wp_page_template' => 'page-zamowienie.php']
+        ]);
+        if ($id && class_exists('WooCommerce')) { update_option('woocommerce_checkout_page_id', $id); }
+    } else {
+        if (class_exists('WooCommerce') && get_option('woocommerce_checkout_page_id') != $co_page->ID) {
+            update_option('woocommerce_checkout_page_id', $co_page->ID);
+        }
+        $tpl = get_post_meta($co_page->ID, '_wp_page_template', true);
+        if (!$tpl || $tpl === 'default') { update_post_meta($co_page->ID, '_wp_page_template', 'page-zamowienie.php'); }
+    }
+}
+add_action('preomar_delayed_setup', 'preomar_setup_checkout_page');
+add_action('admin_init', function(){ if (!get_transient('preomar_checkout_checked')) { preomar_setup_checkout_page(); set_transient('preomar_checkout_checked', true, HOUR_IN_SECONDS); } });
+
+// Runtime naprawa strony koszyka (placeholder -> shortcode) + jednorazowe w danej sesji
+add_action('init', function(){
+    if ( is_admin() ) return;
+    $cart_id = (int) get_option('woocommerce_cart_page_id');
+    if ( ! $cart_id ) {
+        $p = get_page_by_path('koszyk');
+        if ( $p ) { $cart_id = $p->ID; update_option('woocommerce_cart_page_id', $cart_id); }
+    }
+    if ( ! $cart_id ) return;
+    $p = get_post($cart_id);
+    if ( ! $p ) return;
+    $raw = (string) $p->post_content;
+    $plain = strtolower( trim( wp_strip_all_tags( $raw ) ) );
+    if ( $plain === '' || strpos($plain,'wielkie rzeczy') !== false || strpos($plain,'coming soon') !== false || strpos($plain,'wkrótce uruchomimy') !== false || ! has_shortcode($raw,'woocommerce_cart') ) {
+        wp_update_post(['ID'=>$cart_id,'post_content'=>'[woocommerce_cart]']);
+    }
+});
+
+// Friendly guest message on cart page (do NOT duplicate existing functions)
+add_filter('the_content', function($content){
+    if ( function_exists('is_cart') && is_cart() && ! is_user_logged_in() ) {
+        // Jeśli strona koszyka nie zawiera shortcode koszyka – nie ruszaj (może to specjalny landing)
+        if ( strpos( $content, '[woocommerce_cart' ) === false ) {
+            // fallback: wyświetl i tak kartę – placeholder prawdopodobnie
+        }
+        ob_start();
+        echo '<div class="preomar-guest-cart" style="max-width:820px;margin:70px auto 40px;background:#fff;border:1px solid #e5ebf2;border-radius:28px;padding:70px 60px;text-align:center;box-shadow:0 16px 42px -12px rgba(28,44,72,.18);">';
+        echo '<h1 style="margin:0 0 26px;font-size:2.15rem;font-weight:800;color:#1d2e49;">Zaloguj się aby korzystać z koszyka</h1>';
+        echo '<p style="margin:0 0 38px;font-size:1rem;line-height:1.55;color:#4a5664;">Posiadanie konta pozwala dodawać produkty, zapisywać historię zakupów i szybciej finalizować zamówienia.</p>';
+        $login_url = esc_url( wp_login_url( home_url('/koszyk/') ) );
+        $register_url = function_exists('wp_registration_url') ? esc_url( wp_registration_url() ) : esc_url( wp_login_url( home_url('/koszyk/') ) );
+        echo '<div style="display:flex;flex-wrap:wrap;justify-content:center;gap:18px;">';
+        echo '<a href="'.$login_url.'" class="login-btn" style="display:inline-block;background:#ff6b00;color:#fff;text-decoration:none;font-weight:700;padding:18px 44px;border-radius:18px;box-shadow:0 10px 30px -8px rgba(255,107,0,.5);transition:.35s;">Zaloguj się</a>';
+        echo '<a href="'.$register_url.'" class="login-btn" style="display:inline-block;background:#1E3A8A;color:#fff;text-decoration:none;font-weight:700;padding:18px 44px;border-radius:18px;box-shadow:0 10px 30px -8px rgba(30,58,138,.45);transition:.35s;">Załóż konto</a>';
+        echo '</div>';
+        echo '<p style="margin:46px 0 0;font-size:.78rem;letter-spacing:.5px;color:#6b7280;">Rejestracja bezpłatna. Brak spamu – tylko potwierdzenia transakcji.</p>';
+        echo '</div>';
+        return ob_get_clean();
+    }
+    return $content;
+}, 40); // priority po ewentualnych placeholderach
 
 // AJAX HANDLERS FOR CUSTOM LOGIN FORMS
 add_action('wp_ajax_nopriv_preomar_login', 'preomar_ajax_login');
@@ -1743,21 +2760,70 @@ add_action('wp_head', function(){
     .woocommerce-error a.restore-item,
     .woocommerce-info a.restore-item { display:none !important; }
 
-    /* Ukryj link "Zobacz koszyk" (WooCommerce dodaje .added_to_cart jako link po dodaniu) */
+    /* Całkowicie ukryj komunikat usunięcia pozycji z koszyka (ma link przywracania) */
+    .woocommerce-message:has(a.restore-item) { display:none !important; }
+
+    /* Ukryj link "Zobacz koszyk" (różne warianty WooCommerce) */
     a.added_to_cart, .woocommerce a.added_to_cart { display:none !important; visibility:hidden !important; }
+    .woocommerce-message a.button.wc-forward, .woocommerce-message a.wc-forward,
+    .woocommerce-error a.button.wc-forward, .woocommerce-error a.wc-forward,
+    .woocommerce-info a.button.wc-forward, .woocommerce-info a.wc-forward { display:none !important; visibility:hidden !important; }
     </style>';
 });
 
-// Usuń link "Zobacz koszyk" z komunikatu po dodaniu do koszyka (bez względu na tłumaczenie)
+// Usuń przycisk/link "Zobacz koszyk" z komunikatu po dodaniu do koszyka (różne warianty klas)
 add_filter('wc_add_to_cart_message_html', function($message, $products){
-    // Usuń anchor z klasą added_to_cart
-    $message = preg_replace('#<a[^>]*class="[^"]*added_to_cart[^"]*"[^>]*>.*?</a>#i','',$message);
+    // Zbuduj własny komunikat "Dodano do koszyka …" po polsku
+    $count = 0; $names = [];
+    if (is_array($products)) {
+        foreach ($products as $pid => $qty) {
+            $qty = (int)$qty; if ($qty < 1) $qty = 1;
+            $count += $qty;
+            $t = get_the_title($pid);
+            if ($t) { $names[] = '„'.wp_strip_all_tags($t).'”'; }
+        }
+    }
+    if ($count > 0) {
+        if (count($names) === 1 && $count === 1) {
+            $message = 'Dodano do koszyka: ' . $names[0] . '.';
+        } elseif (count($names) > 1) {
+            $message = 'Dodano do koszyka: ' . implode(', ', $names) . '.';
+        } else {
+            $message = 'Dodano do koszyka (' . $count . ' szt.).';
+        }
+    } else {
+        $message = wp_strip_all_tags($message);
+    }
+    // Usuń zbędne linki w treści komunikatu (różne warianty)
+    $message = preg_replace('#<a[^>]*class="[^"]*added_to_cart[^"]*"[^>]*>.*?</a>#i','', $message);
+    $message = preg_replace('#<a[^>]*class="[^"]*wc-forward[^"]*"[^>]*>.*?</a>#i','', $message);
     return trim($message);
-},10,2);
-// Kompatybilność ze starszym hookiem (jeśli używany)
+}, 10, 2);
+// Kompatybilność ze starszym hookiem (jeśli używany przez wtyczki/tłumaczenia)
 add_filter('woocommerce_add_to_cart_message', function($message){
-    return preg_replace('#<a[^>]*class="[^"]*added_to_cart[^"]*"[^>]*>.*?</a>#i','', $message);
-},10,1);
+    // Starszy hook – zwięzły komunikat bez linków
+    return 'Dodano do koszyka.';
+}, 10, 1);
+
+// Ujednolić komunikat po usunięciu z koszyka
+add_filter('woocommerce_cart_item_removed_message', function($msg, $cart_item){
+    // Nie pokazuj komunikatu o usunięciu pozycji
+    return '';
+}, 10, 2);
+
+// Komunikat przy przywróceniu pozycji
+add_filter('woocommerce_cart_item_restored_message', function($msg, $cart_item){
+    // Nie pokazuj komunikatu o przywróceniu pozycji
+    return '';
+}, 10, 2);
+
+// Dla pewności: po usunięciu/przywróceniu pozycji wyczyść notyfikacje Woo
+add_action('woocommerce_cart_item_removed', function(){
+    if (function_exists('wc_clear_notices')) wc_clear_notices();
+}, 100);
+add_action('woocommerce_cart_item_restored', function(){
+    if (function_exists('wc_clear_notices')) wc_clear_notices();
+}, 100);
 ?><?php
 // ================== DODATKOWE SORTOWANIE ==================
 // Dodajemy opcję 'date-asc' (najstarsze) oraz upewniamy się że 'price-desc' działa.
@@ -1780,14 +2846,16 @@ add_filter('woocommerce_catalog_orderby', function($sortby){
 add_filter('woocommerce_get_catalog_ordering_args', function($args, $orderby, $order){
     switch($orderby){
         case 'price-desc':
-            $args['orderby'] = 'meta_value_num';
+            // Użyj natywnego sortowania WooCommerce po cenie (tabela wc_product_meta_lookup)
+            $args['orderby'] = 'price';
             $args['order'] = 'DESC';
-            $args['meta_key'] = '_price';
+            if (isset($args['meta_key'])) unset($args['meta_key']);
             break;
         case 'price':
-            $args['orderby'] = 'meta_value_num';
+            // Użyj natywnego sortowania WooCommerce po cenie (tabela wc_product_meta_lookup)
+            $args['orderby'] = 'price';
             $args['order'] = 'ASC';
-            $args['meta_key'] = '_price';
+            if (isset($args['meta_key'])) unset($args['meta_key']);
             break;
         case 'date-asc':
             $args['orderby'] = 'date';
@@ -1803,7 +2871,7 @@ add_filter('woocommerce_get_catalog_ordering_args', function($args, $orderby, $o
             break;
     }
     return $args;
-}, 10, 3);
+}, 9999, 3);
 
 // Upewnij się że query_vars akceptuje nasze wartości (opcjonalne, głównie dla bezpieczeństwa)
 add_filter('request', function($vars){
@@ -1814,9 +2882,118 @@ add_filter('request', function($vars){
             $vars['orderby'] = 'menu_order';
         }
     }
+    // Usuń puste product_cat z URL (np. product_cat=) – może generować dziwne tax_query
+    if (isset($vars['product_cat']) && $vars['product_cat'] === '') {
+        unset($vars['product_cat']);
+    }
+    // Usuń domyślne zakresy cen (0/10000) wstawiane przez formularz gdy użytkownik nie filtrował
+    if (isset($vars['min_price']) && isset($vars['max_price'])) {
+        if ($vars['min_price'] === '0' && $vars['max_price'] === '10000') {
+            unset($vars['min_price']);
+            unset($vars['max_price']);
+            add_action('wp_footer', function(){ echo '<!-- PREOMAR DEFAULT_PRICE_RANGE_REMOVED -->'; });
+        }
+    }
     return $vars;
 });
 // ==========================================================
+
+// ============== AWARYJNA REGENERACJA TABEL LOOKUP CEN (WooCommerce) ==============
+// Objaw: strona sklepu/kategorii pusta dla gości, a na stronie głównej produkty widać.
+// Częsta przyczyna: pusta tabela wp_wc_product_meta_lookup (np. po imporcie bazy).
+// Rozwiązanie: jednorazowo zregeneruj lookupy oraz do czasu regeneracji omiń sortowanie/filtry po cenie.
+
+// 1) Jednorazowa regeneracja (z bezpiecznym ograniczeniem przez transient)
+add_action('init', function(){
+    if (!class_exists('WooCommerce')) return;
+    if (get_transient('preomar_lookup_regen_running')) return;
+    global $wpdb;
+    $table = $wpdb->prefix . 'wc_product_meta_lookup';
+    // Sprawdź istnienie tabeli
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) return;
+    // Jeśli pusta – uruchom regenerację
+    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM `$table`");
+    if ($count === 0 && function_exists('wc_update_product_lookup_tables')) {
+        set_transient('preomar_lookup_regen_running', 1, 5 * MINUTE_IN_SECONDS);
+        // Uruchom regenerację synchronicznie (mała baza dev). W produkcji lepiej użyć Action Scheduler.
+        wc_update_product_lookup_tables();
+        delete_transient('preomar_lookup_regen_running');
+        add_action('wp_footer', function(){ echo '<!-- PREOMAR LOOKUP_REGENERATED -->'; });
+    }
+}, 1);
+
+// 2) Jeśli lookup nadal pusty – usuń filtry po cenie i sortowanie po cenie, aby przywrócić listę produktów
+add_filter('request', function($vars){
+    if (!class_exists('WooCommerce')) return $vars;
+    // Działaj tylko na archiwach produktów / sklepie – heurystyka po parametrach
+    $is_product_archive = (isset($vars['post_type']) && $vars['post_type'] === 'product') || isset($_GET['min_price']) || isset($_GET['max_price']) || isset($_GET['orderby']);
+    if (!$is_product_archive) return $vars;
+    global $wpdb; $table = $wpdb->prefix . 'wc_product_meta_lookup';
+    $exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+    if ($exists !== $table) return $vars;
+    $count = (int) $wpdb->get_var("SELECT COUNT(*) FROM `$table`");
+    if ($count === 0) {
+        // Usuń sortowanie / filtry po cenie – do czasu aż lookupy będą gotowe
+        if (isset($vars['orderby']) && ($vars['orderby'] === 'price' || $vars['orderby'] === 'price-desc')) {
+            $vars['orderby'] = 'menu_order';
+        }
+        if (isset($vars['min_price'])) unset($vars['min_price']);
+        if (isset($vars['max_price'])) unset($vars['max_price']);
+        add_action('wp_footer', function(){ echo '<!-- PREOMAR LOOKUP_EMPTY_PRICE_FILTERS_REMOVED -->'; });
+    }
+    return $vars;
+}, 20);
+
+// =============================================================================
+
+// Wczesne czyszczenie zapytań do strony Sklepu – usuń puste 's', pusty product_cat oraz domyślne min/max
+add_filter('request', function($vars){
+    // Wykryj stronę Sklepu po ID/slug
+    $shop_id = function_exists('wc_get_page_id') ? wc_get_page_id('shop') : (int) get_option('woocommerce_shop_page_id');
+    $shop_slug = $shop_id ? get_post_field('post_name', $shop_id) : '';
+    $is_shop_request = false;
+    if ($shop_id) {
+        if ((isset($vars['page_id']) && (int)$vars['page_id'] === (int)$shop_id) || (isset($vars['p']) && (int)$vars['p'] === (int)$shop_id)) {
+            $is_shop_request = true;
+        }
+    }
+    if (!$is_shop_request && $shop_slug) {
+        if (isset($vars['pagename']) && $vars['pagename'] === $shop_slug) { $is_shop_request = true; }
+        // Obsługa struktur /sklep/page/2 – pagename może być z prefiksem
+        if (isset($vars['pagename']) && strpos($vars['pagename'], $shop_slug . '/') === 0) { $is_shop_request = true; }
+    }
+
+    if ($is_shop_request) {
+        $changed = false;
+        if (isset($vars['s']) && $vars['s'] === '') { unset($vars['s']); $changed = true; }
+        if (isset($vars['product_cat']) && $vars['product_cat'] === '') { unset($vars['product_cat']); $changed = true; }
+        if (isset($vars['min_price']) && isset($vars['max_price']) && $vars['min_price'] === '0' && $vars['max_price'] === '10000') {
+            unset($vars['min_price']); unset($vars['max_price']); $changed = true;
+        }
+        if ($changed) { add_action('wp_footer', function(){ echo '<!-- PREOMAR REQUEST_SHOP_CLEAN -->'; }); }
+    }
+    return $vars;
+}, 1);
+
+// OSTATECZNA KOREKTA GŁÓWNEGO ZAPYTANIA SKLEPU (bardzo późno):
+// - usuń puste 's'
+// - zamień meta_key=_price + orderby=meta_value(_num) na orderby=price (lookup)
+add_action('pre_get_posts', function($q){
+    if (is_admin() || !$q->is_main_query()) return;
+    if (!(function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag()))) return;
+    // Usuń puste s
+    $s = $q->get('s');
+    if ($s === '') { $q->set('s', null); if (property_exists($q, 'is_search')) { $q->is_search = false; } }
+    // Napraw sortowanie po cenie przez postmeta
+    $meta_key = $q->get('meta_key');
+    $orderby  = $q->get('orderby');
+    if ($meta_key === '_price' || in_array($orderby, ['meta_value','meta_value_num'], true)) {
+        $q->set('meta_key', null);
+        $q->set('orderby', 'price');
+        add_action('wp_footer', function(){ echo '<!-- PREOMAR ORDER_FIX_ENFORCED -->'; });
+    }
+}, 999);
 
 // ================== FILTRY BOCZNE (KATEGORIE) – WERSJA POD NATYWNY PRICE FILTER WooCommerce ==================
 // Usunięto ręczne meta_query na _price aby korzystać z wbudowanej logiki WooCommerce,
@@ -1826,6 +3003,8 @@ add_action('pre_get_posts', function($q){
     if (!(is_shop() || is_product_category() || is_product_tag())) return;
 
     $q->set('post_type','product');
+    // Tylko opublikowane produkty na listach sklepu (goście muszą je widzieć)
+    $q->set('post_status','publish');
     if (isset($_GET['s']) && $_GET['s'] === '') {
         unset($q->query_vars['s']);
         if (property_exists($q, 'is_search')) $q->is_search = false;
@@ -1927,6 +3106,33 @@ add_filter('woocommerce_product_query_tax_query', function($tax_query){
     return $tax_query;
 });
 
+// Twarda normalizacja filtra widoczności produktów: upewnij się, że nie jest odwrócony.
+// Jeśli jakiś plugin ustawi operator na IN dla termów wykluczających, może to wyzerować wyniki dla gości.
+add_filter('woocommerce_product_query_tax_query', function($tax_query){
+    // Nie dotykaj, jeśli używamy własnych kategorii (tam i tak usuwamy filtr widoczności wyżej)
+    if (!empty($_GET['categories'])) return $tax_query;
+    $changed = false;
+    foreach ($tax_query as $idx => $clause) {
+        if (!is_array($clause)) continue;
+        if (!isset($clause['taxonomy']) || $clause['taxonomy'] !== 'product_visibility') continue;
+        $terms = isset($clause['terms']) ? (array)$clause['terms'] : [];
+        $operator = isset($clause['operator']) ? strtoupper($clause['operator']) : '';
+        // Kluczowe termy wykluczające w WooCommerce
+        $exclude_candidates = ['exclude-from-catalog','exclude-from-search','outofstock'];
+        $has_exclude_terms = false;
+        foreach ($terms as $t) { if (in_array($t, $exclude_candidates, true)) { $has_exclude_terms = true; break; } }
+        if ($has_exclude_terms && ($operator === '' || $operator === 'IN')) {
+            // Zamień na NOT IN aby nie zawężać do samych "wykluczonych"
+            $tax_query[$idx]['operator'] = 'NOT IN';
+            $changed = true;
+        }
+    }
+    if ($changed) {
+        add_action('wp_footer', function(){ echo '<!-- PREOMAR VISIBILITY_FORCE_NOT_IN -->'; });
+    }
+    return $tax_query;
+}, 15);
+
 // Pełny DEBUG końcowego zapytania głównego (po wykonaniu) – zobaczmy finalną SQL i kluczowe query_vars
 add_action('wp_footer', function(){
     if (!(is_shop() || is_product_category() || is_product_tag())) return;
@@ -1941,6 +3147,20 @@ add_action('wp_footer', function(){
     $mq = isset($vars['meta_query']) && is_array($vars['meta_query']) ? count($vars['meta_query']) : 0;
     $tq = isset($vars['tax_query']) && is_array($vars['tax_query']) ? count($vars['tax_query']) : 0;
     echo '<!-- PREOMAR MAINQUERY vars: '.esc_html(implode(' ', $out)).' meta_clauses='.$mq.' tax_clauses='.$tq.' sql: '.esc_html($sql).' -->';
+    // Debug summary of hooks
+    if (isset($GLOBALS['PREOMAR_DBG']) && is_array($GLOBALS['PREOMAR_DBG'])){
+        $d = $GLOBALS['PREOMAR_DBG'];
+        $flags = 'bm=' . (int)!empty($d['before_main']) .
+                 ' am=' . (int)!empty($d['after_main']) .
+                 ' bl=' . (int)!empty($d['before_loop']) .
+                 ' al=' . (int)!empty($d['after_loop']) .
+                 ' np=' . (int)!empty($d['no_products']) .
+                 ' wls=' . (int)!empty($d['wp_loop_start']) .
+                 ' wle=' . (int)!empty($d['wp_loop_end']) .
+                 ' tpl=' . (!empty($d['template']) ? esc_html($d['template']) : '-') .
+                 ' arch=' . (int)!empty($d['archive_tpl']);
+        echo '<!-- PREOMAR DBG_SUMMARY ' . $flags . ' -->';
+    }
 });
 
 // Usuń pusty parametr wyszukiwania dla zapytań produktów zanim powstanie is_search=1 (zapobiega AND 0=1 w SQL)
@@ -1958,8 +3178,153 @@ add_filter('request', function($vars){
 // ================================================================
 // ==================================================================
 
+// Debug pętli sklepu: oznacz start/koniec oraz przypadek braku produktów
+// Global debug flags
+if (!isset($GLOBALS['PREOMAR_DBG'])) {
+    $GLOBALS['PREOMAR_DBG'] = [
+        'before_main' => false,
+        'after_main' => false,
+        'before_loop' => false,
+        'after_loop' => false,
+        'no_products' => false,
+        'wp_loop_start' => false,
+        'wp_loop_end' => false,
+        'template' => '',
+        'archive_tpl' => false,
+    ];
+}
+
+add_action('woocommerce_before_shop_loop', function(){
+    $GLOBALS['PREOMAR_DBG']['before_loop'] = true;
+    echo '<!-- PREOMAR LOOP_START -->';
+}, 1);
+add_action('woocommerce_after_shop_loop', function(){
+    $GLOBALS['PREOMAR_DBG']['after_loop'] = true;
+    echo '<!-- PREOMAR LOOP_END -->';
+}, 999);
+add_action('woocommerce_no_products_found', function(){
+    $GLOBALS['PREOMAR_DBG']['no_products'] = true;
+    echo '<!-- PREOMAR LOOP_NO_PRODUCTS -->';
+});
+
+// Dodatkowe markery: przed/po głównej treści WooCommerce
+add_action('woocommerce_before_main_content', function(){
+    $GLOBALS['PREOMAR_DBG']['before_main'] = true;
+    echo '<!-- PREOMAR BEFORE_MAIN -->';
+}, 1);
+add_action('woocommerce_after_main_content', function(){
+    $GLOBALS['PREOMAR_DBG']['after_main'] = true;
+    echo '<!-- PREOMAR AFTER_MAIN -->';
+}, 999);
+
+// Markery ogólnej pętli WP dla głównego zapytania na stronach sklepu/kategorii/tagu
+add_action('loop_start', function($query){
+    if (!is_a($query, 'WP_Query')) return;
+    if (!$query->is_main_query()) return;
+    if (function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag())) {
+        $GLOBALS['PREOMAR_DBG']['wp_loop_start'] = true;
+        echo '<!-- PREOMAR WP_LOOP_START -->';
+    }
+}, 1);
+add_action('loop_end', function($query){
+    if (!is_a($query, 'WP_Query')) return;
+    if (!$query->is_main_query()) return;
+    if (function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag())) {
+        $GLOBALS['PREOMAR_DBG']['wp_loop_end'] = true;
+        echo '<!-- PREOMAR WP_LOOP_END -->';
+    }
+}, 999);
+
+// Śledzenie głównego pliku szablonu użytego do renderu
+add_filter('template_include', function($template){
+    $base = basename($template);
+    $GLOBALS['PREOMAR_DBG']['template'] = $base;
+    if ($base === 'archive-product.php') { $GLOBALS['PREOMAR_DBG']['archive_tpl'] = true; }
+    echo '<!-- PREOMAR TEMPLATE_INCLUDE ' . esc_html($base) . ' -->';
+    return $template;
+}, 1000);
+
+// Bardzo wczesny render single produktu – omija maintenance/coming-soon które podmieniają treść gościom
+function preomar_render_product_early_bypass(){
+    if (!function_exists('is_singular') || !is_singular('product')) return;
+    if (is_admin()) return;
+    $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+    if ($method !== 'GET') return;
+    if (!empty($_GET['add-to-cart'])) return;
+
+    // Wymuś 200 OK i brak cache, po czym wyrenderuj Woo szablon i zakończ zanim wtyczki przejmą ster
+    status_header(200);
+    nocache_headers();
+
+    $tpl = locate_template(['woocommerce/single-product.php','single-product.php']);
+    if ($tpl) {
+        include $tpl; // phpcs:ignore WordPressVIPMinimum.Files.IncludingFile.UsingVariable
+        exit;
+    }
+    // Fallback gdyby nie znalazł szablonu – użyj części Woo
+    if (function_exists('wc_get_template_part')) {
+        get_header('shop');
+        while (have_posts()) { the_post(); wc_get_template_part('content','single-product'); }
+        get_footer('shop');
+        exit;
+    }
+}
+add_action('template_redirect','preomar_render_product_early_bypass', -10000);
+
+// Markery wokół części szablonów WooCommerce (np. content-product.php)
+add_action('woocommerce_before_template_part', function($template_name, $template_path, $located){
+    echo '<!-- PREOMAR BEFORE_TPL name=' . esc_html($template_name) . ' located=' . esc_html(basename($located)) . ' -->';
+}, 10, 3);
+add_action('woocommerce_after_template_part', function($template_name, $template_path, $located){
+    echo '<!-- PREOMAR AFTER_TPL name=' . esc_html($template_name) . ' located=' . esc_html(basename($located)) . ' -->';
+}, 10, 3);
+
+// Marker podczas wykonywania shortcode'ów produktowych (np. [products])
+add_filter('do_shortcode_tag', function($output, $tag, $attr){
+    if (in_array($tag, ['products','product_category','product_categories','featured_products','sale_products','best_selling_products','top_rated_products','recent_products'], true)){
+        echo '<!-- PREOMAR SHORTCODE ' . esc_html($tag) . ' -->';
+    }
+    return $output;
+}, 10, 3);
+
+// Wymuś użycie wrappera woocommerce.php dla archiwów sklepu (omija bloki/template parts)
+add_filter('template_include', function($template){
+    if (function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag())) {
+        $wc_template = locate_template('woocommerce.php');
+        if ($wc_template) {
+            echo '<!-- PREOMAR FORCED_TEMPLATE woocommerce.php -->';
+            return $wc_template;
+        }
+    }
+    return $template;
+}, 50);
+
+// Ostateczny fallback: wymuś włączenie woocommerce.php i zakończ, zanim WordPress załaduje inny szablon
+add_action('template_redirect', function(){
+    if (function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag())) {
+        $wc_template = locate_template('woocommerce.php');
+        if ($wc_template) {
+            status_header(200);
+            include $wc_template;
+            exit;
+        }
+    }
+}, 999);
+
 // OSTATECZNE WYMUSZENIE KATEGORII PO MODYFIKACJACH WooCommerce (jeśli wcześniejsze pre_get_posts zostało nadpisane)
 add_action('woocommerce_product_query', function($q){
+    // Upewnij się, że lista produktów pokazuje tylko opublikowane pozycje (publiczny katalog)
+    if (function_exists('is_shop') && (is_shop() || is_product_category() || is_product_tag())) {
+        $q->set('post_status','publish');
+        // Ostateczne wymuszenie sortowania: pozbądź się meta_key=_price i meta_value(_num)
+        $meta_key = $q->get('meta_key');
+        $orderby  = $q->get('orderby');
+        if ($meta_key === '_price' || in_array($orderby, ['meta_value','meta_value_num'], true)) {
+            $q->set('meta_key', null);
+            $q->set('orderby', 'price');
+            add_action('wp_footer', function(){ echo '<!-- PREOMAR ORDER_FIX_WC_QUERY -->'; });
+        }
+    }
     if (empty($_GET['categories'])) return;
     $slugs = array_filter(array_map('sanitize_title', explode(',', wp_unslash($_GET['categories']))));
     if (!$slugs) return;
@@ -1986,7 +3351,7 @@ add_action('woocommerce_product_query', function($q){
     ];
     $q->set('tax_query', $tax_query);
     add_action('wp_footer', function() use ($all_term_ids, $slugs){
-        echo '<!-- PREOMAR WOO_CAT_APPLIED term_ids=' . esc_html(implode(',', $all_term_ids)) . ' slugs=' . esc_html(implode(',', $slugs)) . ' -->';
+    echo '<!-- PREOMAR WOO_CAT_APPLIED term_ids=' . esc_html(implode(',', $all_term_ids)) . ' slugs=' . esc_html(implode(',', $slugs)) . ' -->';
     });
 }, 40);
 
@@ -2247,7 +3612,7 @@ add_action('wp_head', function(){
         .woocommerce-checkout .col2-set { width:100%; float:none; display:contents; }
         .woocommerce-checkout #customer_details { display:contents; }
         .woocommerce-checkout #order_review_heading { grid-column:2; margin-top:0; }
-        .woocommerce-checkout #order_review { grid-column:2; position:sticky; top:110px; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:26px 26px 10px; box-shadow:0 6px 18px -6px rgba(0,0,0,.08); overflow:hidden; }
+    .woocommerce-checkout #order_review { grid-column:2; position:static; top:auto; background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:26px 26px 10px; box-shadow:0 6px 18px -6px rgba(0,0,0,.08); overflow:hidden; }
         .woocommerce-checkout #order_review * { box-sizing:border-box; }
         .woocommerce-checkout #order_review table.shop_table { width:100%; table-layout:fixed; }
         /* Usuń kolumnę product-total */

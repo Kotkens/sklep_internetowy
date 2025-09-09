@@ -1,49 +1,5 @@
 jQuery(document).ready(function($) {
-    // Obsługa dodawania do koszyka bez przeładowania strony
-    $('.add-to-cart-btn').on('click', function(e) {
-        e.preventDefault();
-        
-        var $button = $(this);
-        var productId = $button.data('product-id');
-        
-        if (!productId) return;
-        
-        // Zmiana tekstu przycisku
-        var originalText = $button.text();
-        $button.text('Dodawanie...');
-        $button.prop('disabled', true);
-        
-        // AJAX request
-        $.ajax({
-            url: wc_add_to_cart_params.ajax_url,
-            type: 'POST',
-            data: {
-                action: 'woocommerce_add_to_cart',
-                product_id: productId,
-                quantity: 1
-            },
-            success: function(response) {
-                if (response.error) {
-                    alert('Błąd: ' + response.error);
-                } else {
-                    // Aktualizacja licznika koszyka
-                    $('.cart-count').text(response.cart_count);
-                    $button.text('Dodano!');
-                    
-                    // Powrót do oryginalnego tekstu po 2 sekundach
-                    setTimeout(function() {
-                        $button.text(originalText);
-                        $button.prop('disabled', false);
-                    }, 2000);
-                }
-            },
-            error: function() {
-                alert('Wystąpił błąd podczas dodawania produktu do koszyka');
-                $button.text(originalText);
-                $button.prop('disabled', false);
-            }
-        });
-    });
+    // Usunięto własny handler dodawania do koszyka – korzystamy z natywnego Woo (ajax_add_to_cart)
     
     // Obsługa mobilnego menu
     $('.mobile-menu-toggle').on('click', function() {
@@ -503,49 +459,7 @@ jQuery(document).ready(function($) {
     // Initialize preloading
     preloadImages();
     
-    // Add to cart animation
-    $('.add-to-cart-btn').on('click', function() {
-        var $button = $(this);
-        var $cart = $('.cart-link');
-        
-        if ($cart.length) {
-            var $product = $button.closest('.product-card');
-            var $productImg = $product.find('img').first();
-            
-            if ($productImg.length) {
-                var $flyImg = $productImg.clone();
-                $flyImg.addClass('fly-to-cart');
-                
-                var productOffset = $productImg.offset();
-                var cartOffset = $cart.offset();
-                
-                $flyImg.css({
-                    position: 'fixed',
-                    top: productOffset.top,
-                    left: productOffset.left,
-                    width: $productImg.width(),
-                    height: $productImg.height(),
-                    'z-index': 9999
-                });
-                
-                $('body').append($flyImg);
-                
-                $flyImg.animate({
-                    top: cartOffset.top,
-                    left: cartOffset.left,
-                    width: 30,
-                    height: 30,
-                    opacity: 0.7
-                }, 800, function() {
-                    $flyImg.remove();
-                    $cart.addClass('cart-shake');
-                    setTimeout(function() {
-                        $cart.removeClass('cart-shake');
-                    }, 500);
-                });
-            }
-        }
-    });
+    // (disabled) Add to cart animation – intentionally removed for a faster UX
     
     // Obsługa responsive kategorii - 6 w rzędzie
     function adjustCategoriesLayout() {
@@ -610,8 +524,12 @@ jQuery(document).ready(function($) {
 // === OBSŁUGA PRZYCISKU OBSERWUJ (single product) ===
 (function($){
     $(document).on('click','.follow-product-btn',function(e){
-        e.preventDefault();
         var $btn = $(this);
+        // Allow navigation for guest CTA
+        if($btn.hasClass('login-required')){
+            return; // do not prevent default – follow the link
+        }
+        e.preventDefault();
         if($btn.data('loading')) return; // simple lock
         var productId = $btn.data('product-id');
         if(!productId) return;

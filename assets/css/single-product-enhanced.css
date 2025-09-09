@@ -137,3 +137,39 @@ body.single-product .woocommerce-tabs ul.tabs{opacity:1;animation:tabsFade .4s e
 body.single-product .product .summary button.single_add_to_cart_button.button{background:var(--sp-orange-grad);border:none}
 body.single-product .product .summary button.single_add_to_cart_button.button:disabled{filter:grayscale(.3);opacity:.6}
 body.single-product{background:radial-gradient(circle at 14% 18%,#f1f5f9 0,#f1f5f9 20%,#f8fafc 55%,#ffffff 100%)}
+
+/* Hide magnifier (zoom) UI */
+body.single-product .pm-zoom-badge{ display:none !important; }
+body.single-product .woocommerce-product-gallery .woocommerce-product-gallery__trigger{ display:none !important; }
+
+/* ============================================
+    GUEST MODE – prettier login CTAs on product
+    ============================================ */
+/* Follow (observe) login CTA – make it a nice pill */
+body.single-product .product .summary .follow-product-btn.login-required{
+   background:#eef2ff; /* subtle indigo tint */
+   border:1px solid #dbeafe;
+   color:#1e293b;
+   gap:10px;
+   font-weight:700;
+   text-decoration:none;
+}
+body.single-product .product .summary .follow-product-btn.login-required .text{ color:inherit; }
+body.single-product .product .summary .follow-product-btn.login-required:hover{ background:#e0e7ff; border-color:#c7d2fe; }
+
+/* Add to cart login CTA – keep brand orange, add lock icon and full width */
+body.single-product .product .summary a.single_add_to_cart_button.login-required{
+   display:inline-flex; align-items:center; justify-content:center; gap:10px;
+   background:var(--sp-orange-grad); color:#fff; text-decoration:none; border-radius:16px; padding:18px 34px;
+   box-shadow:0 4px 18px -4px rgba(234,88,12,.45);
+}
+body.single-product .product .summary a.single_add_to_cart_button.login-required:hover{
+   transform:translateY(-2px);
+   box-shadow:0 10px 26px -6px rgba(234,88,12,.55);
+}
+/* Lower the category row slightly */
+body.single-product .product .summary .product_meta{ margin-top:18px; }
+/* Make sure spacing looks good when cart form is hidden */
+@media (min-width:961px){
+   body.single-product .product .summary a.single_add_to_cart_button.login-required{ width:100%; }
+}

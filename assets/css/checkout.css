@@ -1,0 +1,38 @@
+:root{--pm-blue:#1E3A8A;--pm-blue-dark:#142c63;--pm-accent:#ff6b35;--pm-accent-hover:#ff7d4f;--pm-border:#e5e7eb;--pm-bg:#f8f9fa}
+/* Layout polish without changing Woo structure */
+.woocommerce-checkout{max-width:1200px;margin:0 auto;padding:12px 18px}
+.woocommerce-checkout h3{color:#1f2937;margin-top:10px}
+.woocommerce-checkout .col2-set,.woocommerce-checkout .woocommerce-billing-fields,
+.woocommerce-checkout .woocommerce-shipping-fields,.woocommerce-checkout .woocommerce-additional-fields{background:#fff;border:1px solid var(--pm-border);border-radius:12px;padding:18px}
+/* Fields */
+.woocommerce form .form-row input.input-text,
+.woocommerce form .form-row select,
+.woocommerce form .form-row textarea{border:1px solid var(--pm-border);border-radius:8px;padding:10px 12px;box-shadow:none;background:#fff}
+.woocommerce form .form-row input.input-text:focus,
+.woocommerce form .form-row select:focus,
+.woocommerce form .form-row textarea:focus{outline:none;border-color:var(--pm-accent);box-shadow:0 0 0 2px rgba(255,107,53,.2)}
+.select2-container--default .select2-selection--single{border:1px solid var(--pm-border);border-radius:8px;height:40px}
+.select2-container--default .select2-selection--single .select2-selection__rendered{line-height:38px;padding-left:10px}
+.select2-container--default .select2-selection--single .select2-selection__arrow{height:38px}
+/* Order review card */
+#order_review{border:1px solid var(--pm-border);border-radius:12px;padding:16px;background:#fff}
+#order_review_heading{margin:0 0 12px;color:var(--pm-blue)}
+.woocommerce-checkout-review-order-table th{font-weight:600;color:#4b5563}
+.woocommerce-checkout-review-order-table td{color:#111827}
+.woocommerce-checkout-review-order-table tfoot tr.order-total th{color:var(--pm-blue)}
+.woocommerce-checkout-review-order-table tfoot tr.order-total td{font-size:18px;font-weight:700;color:var(--pm-blue)}
+/* Radios (shipping, payment) */
+ul#shipping_method li, .wc_payment_methods li{background:#fff;border:1px solid var(--pm-border);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+/* Buttons */
+.woocommerce a.button, .woocommerce button.button, .woocommerce input.button{background:var(--pm-accent);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-weight:600;box-shadow:0 6px 16px -4px rgba(0,0,0,.12)}
+.woocommerce a.button:hover, .woocommerce button.button:hover, .woocommerce input.button:hover{background:var(--pm-accent-hover)}
+.woocommerce-checkout .place-order .button{width:100%;font-size:15px}
+/* Notices: hide wc-forward (view cart) */
+.woocommerce .woocommerce-message .wc-forward,
+.woocommerce .woocommerce-error .wc-forward,
+.woocommerce .woocommerce-info .wc-forward{display:none!important}
+/* Minor spacing */
+.woocommerce form.checkout{margin-top:10px}
+/* Free shipping badge styling compatible with cart */
+.woocommerce ul#shipping_method li label .free-badge{background:#10b981;color:#fff;font-size:11px;padding:2px 6px;border-radius:6px;margin-left:6px}
+@media(max-width:1020px){.woocommerce-checkout{padding:10px}.woocommerce-checkout .col2-set,.woocommerce-checkout .woocommerce-billing-fields,.woocommerce-checkout .woocommerce-shipping-fields,.woocommerce-checkout .woocommerce-additional-fields{padding:14px}}

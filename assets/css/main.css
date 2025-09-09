@@ -215,12 +215,16 @@ body.search-results .product-card:hover .product-image-wrapper img {
     border-radius: 4px;
     font-weight: bold;
     cursor: pointer;
-    transition: background 0.3s;
+    text-decoration: none; /* usuń podkreślenie na linku */
+    display: inline-flex; align-items: center; justify-content: center; /* lepsze centrowanie tekstu */
+    transition: background .2s ease, transform .06s ease; /* subtelny feedback przy kliknięciu */
 }
 
 .add-to-cart-btn:hover {
     background: #e55a00;
 }
+
+.add-to-cart-btn:active { transform: translateY(1px); }
 
 /* Sidebar Styles */
 .sidebar {
@@ -252,6 +256,19 @@ body.search-results .product-card:hover .product-image-wrapper img {
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 30px;
 }
+/* Remove white gap under fixed header on empty shop/archive page */
+body.post-type-archive-product.with-fixed-header #page,
+body.tax-product_cat.with-fixed-header #page,
+body.woocommerce-shop.with-fixed-header #page {margin-top:0;padding-top:0;}
+body.post-type-archive-product #page > :first-child {margin-top:0;}
+/* Compact hero / coming soon message container if present */
+body.post-type-archive-product .woocommerce-products-header {margin-top:0;padding-top:10px;}
+/* Force top-aligned content (remove large vertical gap) on empty shop archive */
+/* (OLD) body.post-type-archive-product #page.site {display:block !important;}  -- removed: blocked sticky footer flex layout */
+body.post-type-archive-product #page.site > * {margin-top:0;}
+body.post-type-archive-product h1, 
+body.post-type-archive-product .woocommerce-products-header__title,
+body.post-type-archive-product .page-title {margin-top:25px !important;}
 
 .results-count {
     font-size: 14px;
@@ -976,7 +993,13 @@ body.single-product form.cart + .follow-product-btn {margin-top:-10px;}
 /* Wishlist (Obserwowane) page */
 .wishlist-container {max-width:1200px;margin:0 auto;padding:40px 15px;}
 .wishlist-container h1 {font-size:2.2rem;margin:0 0 30px;font-weight:800;color:#1d2e49;}
-.wishlist-grid {margin-top:10px;display:flex;flex-wrap:wrap;gap:36px;}
+.wishlist-grid {margin-top:10px;display:flex;flex-wrap:wrap;gap:36px;justify-content:center;}
+/* Center single item case (when only one product is observed) */
+.wishlist-grid > .wishlist-item:only-child {
+    flex:0 1 340px; /* reasonable card width */
+    margin-left:auto;
+    margin-right:auto; /* centers within flex container */
+}
 /* Wersja ulepszona */
 .enhanced-wishlist .wishlist-item {--wi-radius:18px;--wi-border:#e4eaf1;--wi-bg:#ffffff;--wi-shadow:0 4px 10px -2px rgba(15,23,42,.06),0 2px 4px -2px rgba(15,23,42,.04);--wi-shadow-hover:0 14px 32px -6px rgba(15,23,42,.18);position:relative;flex:0 1 calc(25% - 27px);display:flex;flex-direction:column;background:var(--wi-bg);border:1px solid var(--wi-border);border-radius:var(--wi-radius);box-shadow:var(--wi-shadow);overflow:hidden;transition:.4s cubic-bezier(.4,.0,.2,1);isolation:isolate;}
 .enhanced-wishlist .wishlist-item:before {content:"";position:absolute;inset:0;background:linear-gradient(140deg,#f8fafc,#f1f5f9);opacity:0;transition:.5s;z-index:0;}
@@ -1003,6 +1026,8 @@ body.single-product form.cart + .follow-product-btn {margin-top:-10px;}
 /* Responsive */
 @media (max-width:1200px){.enhanced-wishlist .wishlist-item{flex:0 1 calc(33.333% - 24px);} }
 @media (max-width:900px){.enhanced-wishlist .wishlist-item{flex:0 1 calc(50% - 22px);} }
+/* Force single column a bit earlier (mobile narrow window cases) */
+@media (max-width:700px){.enhanced-wishlist .wishlist-item{flex:0 1 100%;}}
 @media (max-width:560px){.enhanced-wishlist .wishlist-item{flex:0 1 100%;} }
 /* Ukryj domyślny tytuł strony jeśli jest wyrenderowany */
 .page-template-default.page .entry-title, .page .entry-header h1, .page .page-title {display:none !important;}
@@ -1012,7 +1037,34 @@ body.page-id-obserwowane, body.page-slug-obserwowane {background:#f5f7fa;}
 body.page-id-obserwowane #content, body.page-slug-obserwowane #content {padding-bottom:0;}
 body.page-id-obserwowane .site-main, body.page-slug-obserwowane .site-main {padding-bottom:0;margin-bottom:0;}
 body.page-id-obserwowane .site-content, body.page-slug-obserwowane .site-content {margin-bottom:0;}
-footer.site-footer {margin-top:40px;}
+/* Poprzednio globalne: footer.site-footer {margin-top:40px;} powodowało biały/jaśniejszy odstęp na krótkich stronach (np. Sprzedawaj).
+    Zawężamy do stron listy obserwowanych oraz dajemy override dla Sprzedawaj. */
+body.page-id-obserwowane footer.site-footer,
+body.page-slug-obserwowane footer.site-footer {margin-top:40px;}
+body.page-template-page-sprzedawaj footer.site-footer {margin-top:0 !important;}
+/* === HARD FIX: Usuń elastyczne rozciąganie kontenera tylko na stronie Sprzedawaj (biały pasek pod stopką) === */
+/* Usunięto wcześniejszy HARD FIX (display:block) – przywracamy flex layout aby stopka była przyklejona do dołu przy krótkiej treści */
+body.page-template-page-sprzedawaj #page.site > footer.site-footer {margin-top:auto;}
+/* Usunięto wcześniejsze min-height:100vh (blokowało poprawne wyliczanie wysokości przy stałym headerze) */
+body.page-template-page-sprzedawaj, body.page-template-page-sprzedawaj #page.site {display:flex;flex-direction:column;}
+body.page-template-page-sprzedawaj .sell-auth-box {margin-top:40px;margin-bottom:40px;}
+/* Global sticky footer logic: wypełnij wysokość ekranu pomniejszoną o stały header */
+/* === STICKY FOOTER – uproszczona wersja (działa globalnie, również na sklepie) === */
+body.with-fixed-header {display:flex;flex-direction:column;min-height:100vh;}
+body.with-fixed-header .categories-navigation {flex:0 0 auto;}
+/* Usunięto min-height:auto !important aby poniższe calc() mogło zadziałać */
+body.with-fixed-header #page.site {flex:1 0 auto;display:flex;flex-direction:column;}
+body.with-fixed-header #page.site > footer.site-footer {margin-top:auto;}
+/* OSTATECZNY DOCISK STOPKI: #page wypełnia viewport pomniejszony o header + pasek kategorii */
+body.with-fixed-header #page.site {min-height:calc(100vh - var(--header-height) - var(--cat-nav-height, 0px));}
+/* Re-enable flex layout on WooCommerce listing/search pages (was overridden earlier) */
+body.post-type-archive-product.with-fixed-header #page.site,
+body.tax-product_cat.with-fixed-header #page.site,
+body.woocommerce-shop.with-fixed-header #page.site,
+body.search-results.with-fixed-header #page.site {
+    display:flex !important;
+    flex-direction:column;
+}
 /* --- FIX: Ukrycie nagłówka 'Obserwowane' który pozostaje poza containerem --- */
 body.page h1:first-child, body.page article.page h1:first-child {display:none !important;}
 article.page h1, .entry-content > h1 {display:none !important;}
@@ -1020,7 +1072,7 @@ article.page h1, .entry-content > h1 {display:none !important;}
 article#post-126 h1, body.page-id-126 h1 {display:none !important;}
 
 /* --- FIX: Biały pasek na dole: dopasuj tło i wypełnienie --- */
-html, body {background:#f5f7fa;min-height:100%;}
+html, body {background:#f5f7fa;min-height:100%;margin:0;padding:0;}
 body {display:flex;flex-direction:column;}
 #page, .site, .site-content {flex:1 0 auto;}
 footer.site-footer {flex-shrink:0;}
@@ -1839,6 +1891,14 @@ body.single-product .summary.entry-summary{display:inline-block;}
 
 /* ================= Purchased Products (Moje zakupy) ================= */
 .purchased-products-grid { margin:25px 0 10px; }
+/* Wycentruj siatkę w "Moje zakupy" – stała szerokość kolumn i centrowanie torów */
+.purchased-products-grid{
+    grid-template-columns:repeat(auto-fit,minmax(280px,340px));
+    justify-content:center;
+}
+@media (max-width:640px){
+    .purchased-products-grid{grid-template-columns:repeat(auto-fit,minmax(220px,1fr));}
+}
 .purchased-products-grid .product-card { border:1px solid #e5e9ef; border-radius:16px; box-shadow:0 2px 6px rgba(15,23,42,.06); }
 .purchased-products-grid .product-card:hover { box-shadow:0 8px 22px -4px rgba(15,23,42,.18); }
 .purchased-products-grid .product-card .product-image-wrapper { border-radius:16px 16px 0 0; }
@@ -1850,6 +1910,35 @@ body.single-product .summary.entry-summary{display:inline-block;}
 .purchased-products-grid .product-card .price { font-size:1rem; font-weight:700; color:#0d3b66; display:flex; align-items:flex-end; gap:8px; }
 .purchased-products-grid .product-card .price del { color:#94a3b8; font-weight:500; font-size:.7rem; }
 .purchased-products-grid .product-card .price ins { text-decoration:none; }
-.purchased-products-grid .product-card .add-to-cart-btn { border-radius:10px; font-size:.75rem; font-weight:700; letter-spacing:.4px; padding:11px 14px; }
+.purchased-products-grid .product-card .add-to-cart-btn,
+.purchased-products-grid .product-card a.button.add_to_cart_button { 
+    border-radius:10px; font-size:.75rem; font-weight:700; letter-spacing:.4px; padding:11px 14px; 
+    text-decoration:none; /* bez podkreślenia */
+}
 @media (max-width:600px){ .purchased-products-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); } .purchased-products-grid .product-card .product-title{font-size:.85rem;} }
 /* =================================================================== */
+
+/* === FINAL STICKY FOOTER NORMALIZATION (usuwa dodatkowy luz pod stopką) === */
+/* Inline style w header.php ustawia body{min-height:100vh} + padding-top (wysokość headera).
+    Ponieważ header jest position:fixed i nie uczestniczy w normalnym przepływie, ten układ
+    powodował że łączna wysokość (padding-top + #page + kategorie) przekraczała viewport
+    i zostawał pusty obszar pod stopką na krótkich stronach (np. /sprzedawaj/).
+    Rozwiązanie: zerujemy min-height na body i przenosimy odpowiedzialność na #page.
+*/
+body {min-height:0 !important;}
+body.with-fixed-header {min-height:0 !important;}
+/* Najpóźniejsza reguła: nie odejmujemy paska kategorii, bo jest w normalnym przepływie. */
+body.with-fixed-header #page.site {min-height:calc(100vh - var(--header-height) - var(--cat-nav-height, 0px));}
+/* Footer nadal ma margin-top:auto we wcześniejszych regułach, więc pozostaje doklejony. */
+
+/* === Sprzedawaj (niezalogowany) – lepsze pionowe wypoziomowanie boxa logowania === */
+body.page-template-page-sprzedawaj:not(.logged-in) #page.site {display:flex;flex-direction:column;}
+body.page-template-page-sprzedawaj:not(.logged-in) .sell-auth-box {
+        /* Centrowanie w dostępnej przestrzeni pomiędzy headerem+nav a stopką */
+        margin-top:clamp(60px,calc((100vh - var(--header-height) - var(--cat-nav-height,0px) - 420px)/2),180px);
+        margin-bottom:60px;
+        transition:margin .3s ease;
+}
+@media (max-width:780px){
+    body.page-template-page-sprzedawaj:not(.logged-in) .sell-auth-box {margin-top:clamp(40px,calc((100vh - var(--header-height) - var(--cat-nav-height,0px) - 420px)/2),140px);margin-bottom:40px;}
+}

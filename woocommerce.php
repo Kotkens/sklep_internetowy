@@ -1,3 +1,4 @@
+<!-- PREOMAR THEME_WC_TEMPLATE -->
 <?php
 /**
  * Template WooCommerce
@@ -114,8 +115,52 @@ get_header(); ?>
             </div>
         <?php endif; ?>
         
-        <!-- Treść WooCommerce -->
+        <!-- PREOMAR WC_CONTENT_START -->
         <?php woocommerce_content(); ?>
+        <!-- PREOMAR WC_CONTENT_END -->
+
+        <?php
+        // Fallback: if Woo classic hooks did not run (block templates path), render main query manually
+        if ((is_shop() || is_product_category() || is_product_tag()) && ! did_action('woocommerce_before_shop_loop')) {
+            echo "<!-- PREOMAR FALLBACK_LOOP_START -->\n";
+            if (have_posts()) {
+                if (function_exists('woocommerce_product_loop_start')) {
+                    woocommerce_product_loop_start();
+                } else {
+                    echo '<ul class="products">';
+                }
+                while (have_posts()) {
+                    the_post();
+                    if (function_exists('wc_get_template_part')) {
+                        wc_get_template_part('content', 'product');
+                    } else {
+                        echo '<li class="product">';
+                        echo '<a href="' . esc_url(get_permalink()) . '">' . get_the_title() . '</a>';
+                        if (function_exists('wc_get_product')) {
+                            $product = wc_get_product(get_the_ID());
+                            if ($product) { echo '<span class="price">' . $product->get_price_html() . '</span>'; }
+                        }
+                        echo '</li>';
+                    }
+                }
+                if (function_exists('woocommerce_product_loop_end')) {
+                    woocommerce_product_loop_end();
+                } else {
+                    echo '</ul>';
+                }
+                // Basic pagination fallback
+                if (function_exists('woocommerce_pagination')) {
+                    woocommerce_pagination();
+                } else {
+                    the_posts_pagination();
+                }
+            } else {
+                echo "<!-- PREOMAR FALLBACK_NO_PRODUCTS -->\n";
+                if (function_exists('wc_no_products_found')) { wc_no_products_found(); }
+            }
+            echo "<!-- PREOMAR FALLBACK_LOOP_END -->\n";
+        }
+        ?>
         
     <?php // Sekcja "Dlaczego warto kupować u nas?" usunięta na życzenie użytkownika ?>
     </main>

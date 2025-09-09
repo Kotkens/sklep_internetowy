@@ -7,12 +7,6 @@ get_header(); ?>
 
 <div class="shop-container">
     <main class="shop-content single-product">
-        <!-- Breadcrumbs -->
-        <nav class="breadcrumb">
-            <a href="<?php echo home_url(); ?>">Strona główna</a>
-            > <a href="<?php echo get_permalink(wc_get_page_id('shop')); ?>">Sklep</a>
-            > <?php the_title(); ?>
-        </nav>
         
         <?php while (have_posts()) : the_post(); ?>
             <div class="single-product-wrapper">
@@ -20,7 +14,7 @@ get_header(); ?>
             </div>
         <?php endwhile; ?>
         
-        <!-- Related Products -->
+    <!-- Related Products -->
         <div class="related-products-section">
             <h3>Podobne produkty</h3>
             <?php

@@ -1,227 +1,61 @@
 /*
-Theme Name: PreoMarket
-Description: Nowoczesny motyw WordPress dla WooCommerce - sklep z używanymi rzeczami
-Author: PreoMarket Team
-Version: 1.0
-Tags: ecommerce, woocommerce, marketplace, shop, preowned
+ Theme Name: PreoMarket
+ Description: Motyw – oczyszczony plik CSS (usunięto skorumpowany ogon). Skupienie: RESPONSYWNY HEADER.
 */
 
+/* ========== ROOT TOKENS ========== */
 :root {
-    --primary-color: #1E3A8A;
-    --secondary-color: #1C1C4A;
-    --accent-color: #FF6B00;
-    --text-color: #333;
-    --light-gray: #f5f5f5;
-    --border-color: #e0e0e0;
-    --white: #ffffff;
+    --primary-color:#1E3A8A;
+    --secondary-color:#1C1C4A;
+    --accent-color:#FF6B00;
+    --text-color:#333;
+    --light-gray:#f5f5f5;
+    --border-color:#e0e0e0;
+    --white:#ffffff;
 }
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,Helvetica,sans-serif;line-height:1.6;color:var(--text-color);background:var(--light-gray);} 
+
+/* Ukryj niebieski pasek (header) na stronie /moje-konto/ dla niezalogowanych */
+body.woocommerce-account:not(.logged-in) .site-header{display:none !important;}
+body.woocommerce-account:not(.logged-in) .main-content{padding-top:40px;} /* delikatny oddech nad kartą logowania */
+
+/* ========== HEADER CORE STYLES ========== */
+.site-header{background:var(--primary-color);box-shadow:0 2px 4px rgba(0,0,0,.1);position:sticky;top:0;z-index:1000;}
+.site-header.fixed{position:fixed;}
+.site-header .header-container{max-width:1400px;margin:0 auto;padding:15px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.site-header .site-logo{font-size:24px;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;min-width:140px;flex-shrink:0;}
+.site-header .site-logo .logo-image{max-height:45px;transition:.3s;display:block;position:relative;top:4px;}
+.site-header .site-logo:hover .logo-image{transform:scale(1.05);} 
+
+/* (Usunięto sekcję z login override + NULL) */
+@media (max-width:400px){
+    .site-header .site-logo{min-width:110px;}
+    .site-header .site-logo{order:1;padding:0;height:40px;display:flex;align-items:center;}
+            .site-header .site-logo .logo-image{max-height:40px;height:100%;display:block;position:relative;top:4px;}
+}
+@media (hover:none){
+    /* Na urządzeniach dotykowych pozostawimy dropdown ukryty do ewentualnej przyszłej obsługi kliknięciem */
+    .site-header .user-menu:hover .user-dropdown{display:none;}
 }
 
-body {
-    font-family: 'Arial', sans-serif;
-    line-height: 1.6;
-    color: var(--text-color);
-    background-color: var(--light-gray);
+/* ========== (Optional) HERO SLIDER (zachowana podstawowa sekcja jeśli używane) ========== */
+.hero-slider *{box-sizing:border-box;}
+.slider-btn{background:rgba(0,0,0,.4);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:18px;color:#fff;transition:.3s;display:flex;align-items:center;justify-content:center;}
+.slider-btn:hover{background:rgba(0,0,0,.7);transform:scale(1.1);} 
+.slider-dots{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;z-index:3;}
+.dot{width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,.4);cursor:pointer;transition:.4s;border:2px solid transparent;}
+.dot.active{background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.3);} 
+.dot:hover{background:rgba(255,255,255,.7);} 
+@media (max-width:1024px){
+    .hero-slider{height:380px;margin:0 10px 20px;}
+}
+@media (max-width:768px){
+    .hero-slider{height:auto;min-height:300px;border-radius:8px;}
 }
 
-/* CSS Reset dla hero slider - zapobieganie konfliktom */
-.hero-slider * {
-    box-sizing: border-box;
-}
-
-.hero-slider .slide-split {
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.hero-slider .slide-left,
-.hero-slider .slide-right {
-    margin: 0 !important;
-    float: none !important;
-    clear: none !important;
-}
-    /* User menu dropdown */
-    .user-menu {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-        max-width: none;
-        min-width: 100px;
-        color: white;
-        padding: 6px 8px;
-        border-radius: 6px;
-        transition: all 0.3s;
-        flex-shrink: 0;
-    }
-    
-    .user-menu:hover {
-        background: rgba(255,255,255,0.1);
-    }
-    
-    .user-menu .user-dropdown {
-        display: none;
-        position: absolute;
-        right: 0;
-        top: 100%;
-        background: #fff;
-        border: 1px solid #ddd;
-        min-width: 160px;
-        z-index: 1000;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        border-radius: 8px;
-        overflow: hidden;
-    }
-    
-    .user-menu:hover .user-dropdown {
-        display: block;
-    }
-    
-    .user-menu .user-dropdown a {
-        display: block;
-        padding: 12px 18px;
-        color: #333;
-        text-decoration: none;
-        font-size: 15px;
-        transition: background 0.2s;
-    }
-    .user-menu .user-dropdown a:hover {
-        background: #f5f5f5;
-        color: #ff6b35;
-    }
-    
-    .user-menu-text {
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        font-size: 13px;
-        font-weight: 500;
-    }
-    
-    .user-menu-icon {
-        font-size: 12px;
-        transition: transform 0.3s;
-        flex-shrink: 0;
-    }
-    
-    .user-menu:hover .user-menu-icon {
-        transform: rotate(180deg);
-    }
-
-    /* Responsive breakpoints */
-    @media (max-width: 768px) {
-        .header-container {
-            flex-direction: column;
-            gap: 10px;
-            padding: 10px;
-        }
-        
-        .search-container {
-            width: 100%;
-            order: 2;
-            min-width: auto;
-            max-width: none;
-        }
-        
-        .search-form {
-            width: 100%;
-            min-width: auto;
-        }
-        
-        .header-actions {
-            order: 1;
-            width: 100%;
-            justify-content: space-between;
-            min-width: auto;
-        }
-        
-        .user-menu-text {
-            max-width: 80px;
-        }
-        
-        .search-category {
-            min-width: 80px;
-        }
-        
-        .search-button {
-            min-width: 60px;
-            font-size: 12px;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .search-input {
-            font-size: 12px;
-            padding: 10px 12px;
-        }
-        
-        .search-category {
-            min-width: 60px;
-            font-size: 12px;
-        }
-        
-        .user-menu-text {
-            max-width: 60px;
-        }
-        
-        .header-link {
-            font-size: 12px;
-            padding: 4px 6px;
-        }
-    }
-
-/* Force flexbox layout */
-
-/* Header Styles - Modern Marketplace */
-.site-header {
-    background: var(--primary-color);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.header-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 15px 20px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.site-logo {
-    font-size: 24px;
-    font-weight: bold;
-    color: var(--white);
-    text-decoration: none;
-    display: flex;
-    align-items: center;
-    min-width: 140px;
-    flex-shrink: 0;
-}
-
-.site-logo:hover {
-    color: var(--accent-color);
-}
-
-.site-logo .logo-image {
-    max-height: 45px;
-    width: auto;
-    height: auto;
-    transition: transform 0.3s ease;
-}
-
-.site-logo:hover .logo-image {
-    transform: scale(1.05);
-}
+/* ========== END CLEAN FILE ========== */
 
 .search-container {
     flex: 1;
@@ -427,6 +261,8 @@ body.woocommerce-order-received .woocommerce-bacs-bank-details h3 { margin:0 0 1
 body.woocommerce-order-received .woocommerce-bacs-bank-details .bank_details { list-style:none; margin:0; padding:0; display:grid; gap:6px; }
 body.woocommerce-order-received .woocommerce-bacs-bank-details .bank_details li { font-size:13px; }
 body.woocommerce-order-received .woocommerce-bacs-bank-details .bank_details li strong { font-weight:600; color:#111; }
+/* Wyróżnienie komunikatu instrukcyjnego (pierwszy akapit) */
+body.woocommerce-order-received .woocommerce-bacs-bank-details p:first-of-type { font-weight:600; }
 
 /* Tabela zamówienia */
 body.woocommerce-order-received .woocommerce-order-details { background:#fff; border:1px solid var(--border-color); border-radius:10px; padding:20px 22px 24px; margin:0 0 28px; }
@@ -471,8 +307,9 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
 }
 
 @media print { body.woocommerce-order-received .woocommerce a.button { display:none; } }
-  body.woocommerce-order-received .woocommerce-bacs-bank-details { box-shadow:none; }
-}
+body.woocommerce-order-received .woocommerce-bacs-bank-details { box-shadow:none; }
+/* UWAGA: usunięto zbędny dodatkowy nawias zamykający który psuł dalsze style (w tym hero slider). */
+    .site-header .search-category{display:block;}
 
 
 /* Hero Slider - Modern Split Layout */
@@ -486,6 +323,8 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
     box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
     height: 450px !important;
     min-height: 450px !important;
+    display: block !important; /* Fallback gdy inne reguły nadpiszą */
+    visibility: visible !important; /* Zapewnij widoczność */
 }
 
 .slider-container {
@@ -649,6 +488,61 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
     box-shadow: 0 6px 20px rgba(0,0,0,0.3);
 }
 
+/* =============================================
+     HERO SLIDER RESPONSIVE FIX (no clipping)
+     - Zmniejsz padding / font-size na mniejszych szerokościach
+     - Poniżej 920px przechodzimy w układ pionowy (kolumny)
+     - Wysokość automatyczna: koniec obcinania treści
+     ============================================= */
+@media (max-width:1200px){
+    .hero-slider{height:420px !important;min-height:420px !important;}
+    .slide-left{padding:34px !important;}
+    .promo-text h2{font-size:2.1rem;}
+    .promo-text h3{font-size:2.4rem;}
+}
+@media (max-width:1050px){
+    .hero-slider{height:400px !important;min-height:400px !important;}
+    .slide-left{padding:30px !important;}
+    .promo-text h2{font-size:1.95rem;}
+    .promo-text h3{font-size:2.2rem;}
+    .promo-date,.promo-category{font-size:15px;}
+}
+/* Punkt przejścia w układ pionowy – koniec przycinania */
+@media (max-width:920px){
+    .hero-slider{height:auto !important;min-height:0 !important;padding:0 !important;}
+    .hero-slider .slider-container, .hero-slider .slider-track{height:auto !important;}
+    .hero-slider .slide{position:relative;display:none;height:auto;opacity:0;visibility:hidden;}
+    .hero-slider .slide.active{display:block;opacity:1;visibility:visible;}
+    .slide-split{flex-direction:column !important;height:auto !important;}
+    .slide-left, .slide-right{min-width:100% !important;width:100% !important;}
+    .slide-left{padding:26px 22px 18px !important;}
+    .slide-right{height:230px !important;order:2;}
+    .slide-right .slide-image{height:100% !important;object-fit:cover;}
+    .promo-text h2{font-size:1.8rem;line-height:1.25;}
+    .promo-text h3{font-size:2.1rem;}
+    .promo-date,.promo-category{font-size:14px;}
+    .promo-btn{padding:10px 20px;font-size:15px;}
+    .slider-controls{top:auto;bottom:10px;transform:none;}
+}
+@media (max-width:640px){
+    .slide-left{padding:22px 18px 16px !important;}
+    .promo-text h2{font-size:1.6rem;}
+    .promo-text h3{font-size:1.9rem;}
+    .promo-btn{padding:9px 18px;font-size:14px;}
+    .slide-right{height:200px !important;}
+}
+@media (max-width:480px){
+    .promo-text h2{font-size:1.45rem;}
+    .promo-text h3{font-size:1.7rem;}
+    .promo-date,.promo-category{font-size:13px;}
+    .promo-btn{padding:8px 16px;font-size:13px;}
+    .slide-right{height:170px !important;}
+}
+/* Drobna przerwa od headera gdy jest dwurzędowy na mobile */
+@media (max-width:920px){
+    .hero-slider{margin-top:6px !important;}
+}
+
 /* Slider Navigation */
 .slider-controls {
     position: absolute;
@@ -674,6 +568,130 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+/* =====================================================
+     HEADER RESPONSIVE IMPROVED (ONLY HEADER ADJUSTMENTS)
+     Cel: lepsze zachowanie logo / wyszukiwarki / akcji
+     bez wpływu na resztę layoutu sklepu.
+     ===================================================== */
+
+/* Reset potencjalnych kolizji inline style w header.php */
+.site-header.fixed {position:fixed;}
+
+/* Container: permit wrap when brak miejsca (zamiast nachodzenia) */
+.site-header .header-container {flex-wrap:wrap;}
+.site-header .site-logo{flex:0 0 auto;}
+.site-header .search-container{flex:1 1 520px;min-width:260px;}
+.site-header .search-form{flex:1;min-width:0;}
+.site-header .header-actions{flex:0 0 auto;display:flex;flex-wrap:nowrap;}
+
+/* Delikatne zmniejszanie odstępów przed wrapem (zamiast natychmiastowego przejścia w dwa rzędy) */
+@media (max-width:1350px){
+    .site-header .header-actions{gap:6px;}
+    .site-header .header-link{padding:5px 7px;}
+    .site-header .search-container{flex:1 1 500px;}
+}
+    /* Usunięto wcześniejsze podbijanie ikon; wyrównujemy wysokością 40px */
+    .site-header .header-actions{margin-top:0;}
+/* Usuń twarde min-width z wcześniejszych reguł */
+.site-header .search-form{min-width:0;}
+.site-header .search-input{min-width:0;}
+
+/* Wyrównanie przycisków – pozwól na delikatne zwężenie */
+.site-header .header-actions{min-width:auto;}
+
+/* Medium desktops (max 1250px) - ściskaj elementy zamiast łamać od razu */
+@media (max-width:1250px){
+    .site-header .search-container{max-width:480px;}
+    .site-header .search-input{padding:10px 14px;font-size:13px;}
+    .site-header .search-category{padding:10px 12px;font-size:11.5px;min-width:110px;}
+    .site-header .search-button{padding:10px 16px;font-size:13px;}
+    .site-header .header-link{gap:3px;padding:5px 6px;font-size:12px;}
+    .site-header .user-menu-text{max-width:90px;}
+}
+
+/* Średnie ekrany (max 1220px) – przejście do dwóch rzędów wcześniej aby uniknąć nachodzenia */
+@media (max-width:1220px){
+    /* Eliminacja 'skoku' logo: pozostaw wyśrodkowanie w osi Y i tylko obniż wyszukiwarkę jako drugi rząd */
+    .site-header .header-container{flex-wrap:wrap;row-gap:0;align-items:center;}
+    .site-header .site-logo{order:1;margin-top:0;display:flex;align-items:center;padding:0;}
+    .site-header .site-logo .logo-image{position:static;top:auto;max-height:40px;height:40px;margin-top:0;} /* wyrównanie bez translate */
+    .site-header .header-actions{padding:0;display:flex;align-items:center;height:40px;}
+    .site-header .header-actions .header-link{height:40px;display:flex;align-items:center;padding:0 8px;}
+    .site-header .header-actions{order:2;margin-left:auto;}
+    .site-header .search-container{order:3;flex:1 1 100%;max-width:100%;margin:8px 0 0;}
+    .site-header .search-form{min-width:0;}
+}
+
+/* Dodatkowe ściskanie zanim nastąpi wrap (1100px–1220px) */
+@media (max-width:1220px) and (min-width:1101px){
+    .site-header .search-input{padding:10px 12px;}
+    .site-header .search-category{padding:10px 10px;max-width:120px;}
+    .site-header .search-button{padding:10px 14px;}
+    .site-header .header-link{padding:5px 6px;}
+}
+
+/* Tablet portrait / small (max 780px) – kompaktowy pasek górny + pełna szerokość search pod spodem */
+@media (max-width:780px){
+    /* Zachowaj select kategorii i brak sztucznego --header-height aby uniknąć przeskoku */
+    .site-header .header-container{padding:10px 12px;}
+    .site-header .site-logo .logo-image{max-height:38px;}
+    .site-header .header-actions{gap:4px;}
+    .site-header .header-link span{display:none;}
+    .site-header .user-menu-text{display:none;}
+    .site-header .search-input{font-size:13px;padding:11px 12px;}
+    .site-header .search-button{font-size:12px;min-width:66px;padding:11px 12px;}
+}
+
+/* Mobile (max 560px) – ikony w jednym rzędzie, search pod nimi z przyciskiem jako ikona lupy */
+@media (max-width:560px){
+    .site-header .header-container{padding:8px 10px;}
+    /* Logo + ikony w JEDNYM rzędzie: brak width:100% na akcjach, ikony ściskamy */
+    .site-header .site-logo{order:1;flex:0 0 auto;min-width:120px;display:flex;align-items:center;}
+    .site-header .site-logo .logo-image{max-height:36px;height:36px;top:0;}
+    .site-header .header-actions{order:2;flex:1 1 auto;margin-left:auto;justify-content:flex-end;gap:4px;width:auto;margin-top:0;}
+    .site-header .header-actions .header-link{padding:4px 6px;height:40px;}
+    .site-header .search-container{order:3;flex:1 1 100%;width:100%;margin-top:6px;}
+    .site-header .search-button{min-width:auto;padding:0 10px;display:flex;align-items:center;}
+    /* Usunięto ikonę lupy na przycisku (tekst pozostaje) */
+}
+
+/* Very small (max 400px) – redukcja paddingów */
+@media (max-width:400px){
+    .site-header .site-logo{min-width:110px;}
+    .site-header .search-input{padding:10px 10px;font-size:12px;}
+    .site-header .search-button{padding:0 10px;font-size:11px;}
+}
+
+/* Poprawa liczników (badge) przy ukrytym tekście – niech pozostaną na ikonach */
+@media (max-width:780px){
+    .site-header .wishlist-count, .site-header .cart-count{top:-6px;right:-6px;}
+}
+
+/* Przywrócony klasyczny dropdown user-menu na desktopie */
+.site-header .user-menu{position:relative;}
+.site-header .user-menu{cursor:pointer;}
+.site-header .user-dropdown{position:absolute;top:100%;left:0;background:#fff;color:#1c1c1c;border:1px solid #e2e6ef;box-shadow:0 6px 18px -4px rgba(20,30,55,.25);border-radius:10px;padding:12px 0;min-width:180px;display:none;z-index:3000;max-height:calc(100vh - 40px);overflow-y:auto;}
+/* Gdy mało miejsca po prawej (węższe ekrany) dociśnij dropdown do prawej krawędzi przycisku */
+@media (max-width:980px){
+    .site-header .user-dropdown{left:auto;right:0;}
+}
+@media (max-width:600px){
+    .site-header .user-dropdown{min-width:160px;}
+}
+.site-header .user-dropdown a{display:block;padding:10px 18px;font-size:13px;line-height:1.3;color:#1e2a48;text-decoration:none;white-space:nowrap;}
+.site-header .user-dropdown a:hover{background:#f1f5fb;color:#102749;}
+/* Pokazywanie dropdownu sterowane klasą .open (dodawaną w JS po kliknięciu) */
+.site-header .user-menu.open .user-dropdown{display:block;}
+/* Zapobieganie rozszerzaniu wiersza przez linki – dropdown absolutny */
+.site-header .user-menu .user-menu-text{max-width:120px;overflow:hidden;text-overflow:ellipsis;}
+
+/* Koniec sekcji HEADER RESPONSIVE IMPROVED */
+
+/* HEADER FIX PATCH scalony: select kategorii pokazany już w głównym bloku 1220px; dodatkowo na 780px minimalna szerokość */
+@media (max-width:780px){
+    .site-header .search-category{display:block;min-width:90px;}
 }
 
 .slider-btn:hover {
@@ -1203,11 +1221,66 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
     transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Products Grid - Modern Marketplace */
-.products-grid {
+/* Products Grid - Allegro-like fixed column responsiveness (revised) */
+.products-grid, ul.products {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
+    gap: 18px;
+    grid-template-columns: repeat(5, minmax(0, 1fr)); /* domyślnie 5 kolumn dla typowych szerokości */
+    justify-content: center; /* wycentruj obszar kolumn jeśli wolne miejsce */
+}
+/* Bardzo szerokie ekrany: 6 kolumn gdy jest miejsce */
+@media (min-width: 1700px) { .products-grid, ul.products { grid-template-columns: repeat(6, minmax(0,1fr)); } }
+/* Zmniejszamy liczbę kolumn etapami aby nie robić poziomego scrolla obok sidebaru */
+@media (max-width: 1400px) { .products-grid, ul.products { grid-template-columns: repeat(4, minmax(0,1fr)); } }
+@media (max-width: 1180px) { .products-grid, ul.products { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+@media (max-width: 900px)  { .products-grid, ul.products { grid-template-columns: repeat(2, minmax(0,1fr)); gap:16px; } }
+@media (max-width: 580px)  { .products-grid, ul.products { grid-template-columns: repeat(2, minmax(0,1fr)); gap:14px; } }
+@media (max-width: 430px)  { .products-grid, ul.products { grid-template-columns: 1fr; gap:12px; } }
+/* Ogranicz maksymalną szerokość pojedynczej karty aby wizualnie były spójne */
+.products-grid > *, ul.products > * { max-width: 260px; width:100%; }
+/* Jeśli chcesz pełną szerokość kolumn bez limitu maksymalnego, usuń max-width powyżej lub nadpisz poniżej */
+
+/* Wymuszenie grid na standardowym wyjściu WooCommerce (usuwa floats i szerokości procentowe) */
+.shop-content ul.products {
+    display: grid !important;
+    float: none !important;
+    clear: both !important;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+.shop-content ul.products::before,
+.shop-content ul.products::after { display: none !important; }
+.shop-content ul.products li.product {
+    float: none !important;
+    width: auto !important;
+    margin: 0 !important;
+}
+/* Upewnij się że karty wypełniają kolumnę */
+.shop-content ul.products li.product > * { width:100%; }
+/* Na bardzo szerokich ekranach – auto dopasowanie i centrowanie */
+@media (min-width:1700px){ .products-grid, ul.products { grid-template-columns: repeat(6, minmax(0,1fr)); justify-content:center; } }
+
+/* === HOME PAGE CENTERED PRODUCT GRIDS === */
+body.home .latest-products .products-grid,
+body.home .promo-products .products-grid {
+        display:flex;              /* zamiana grid -> flex tylko na stronie głównej w tych sekcjach */
+        flex-wrap:wrap;
+        justify-content:center;    /* centrowanie w poziomie */
+        gap:18px;
+}
+body.home .latest-products .products-grid > *,
+body.home .promo-products .products-grid > * { 
+        flex:0 0 260px;            /* stała szerokość kart */
+}
+/* Responsywność – 2 w rzędzie na mniejszych i 1 na bardzo małych */
+@media (max-width:600px){
+    body.home .latest-products .products-grid > *,
+    body.home .promo-products .products-grid > * {flex:0 0 calc(50% - 9px);} 
+}
+@media (max-width:430px){
+    body.home .latest-products .products-grid > *,
+    body.home .promo-products .products-grid > * {flex:0 0 100%;}
 }
 
 .product-card {
@@ -1231,8 +1304,9 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
 
 .product-image-wrapper {
     position: relative;
-    height: 200px;
+    aspect-ratio: 1/1; /* kwadrat dla spójnych miniaturek */
     overflow: hidden;
+    height: auto;
 }
 
 .product-image {
@@ -1862,52 +1936,16 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
     }
 }
 
-/* Responsive Hero Slider */
+/* Responsive Design Enhancement (fixed closing) */
 @media (max-width: 768px) {
-    .slider-container {
-        height: 280px;
-    }
-    
-    .slide-overlay {
-        padding: 30px 20px;
-    }
-    
-    .promo-text h2 {
-        font-size: 1.6rem;
-    }
-    
-    .promo-text h3 {
-        font-size: 2rem;
-    }
-    
-    .discount {
-        font-size: 2.4rem;
-    }
-    
-    .promo-text {
-        font-size: 22px;
-    }
-    
-    .days-badge {
-        padding: 6px 12px;
-        font-size: 14px;
-    }
-    
-    .promo-date,
-    .promo-category {
-        font-size: 12px;
-        padding: 6px 12px;
-    }
-    
-    .promo-btn {
-        padding: 10px 24px;
-        font-size: 14px;
-    }
-    
-    .slider-controls {
-        padding: 0 15px;
-    }
-    
+    .custom-login-container { margin:20px 15px; }
+    .login-subtitle { font-size:13px; }
+    .custom-login-container .woocommerce-form-login { padding:25px 20px; }
+    .login-benefits { padding:20px; }
+    .login-benefits li { font-size:13px; padding:10px 0; }
+}
+
+/* (Corrupted tail removed to restore CSS parsing) */
     .slider-btn {
         width: 35px;
         height: 35px;
@@ -2018,14 +2056,17 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
 /* Shop & Filters Styles */
 .shop-container {
     display: flex;
-    max-width: 1400px;
+    flex-wrap: nowrap;
+    max-width: 1600px; /* trochę szerzej dla 6 kolumn bez ściskania */
     margin: 0 auto;
-    padding: 30px;
+    padding: 30px 35px;
     gap: 30px;
+    box-sizing: border-box;
 }
 
 .shop-sidebar {
     flex: 0 0 280px;
+    min-width: 260px; /* zabezpiecza przed ściskaniem do 0 i znikaniem */
     background: white;
     border-radius: 12px;
     padding: 25px;
@@ -2039,7 +2080,7 @@ body.woocommerce-order-received a.button:hover { background:#e55a00; }
 }
 
 .shop-content {
-    flex: 1;
+    flex: 1 1 auto;
     background: white;
     border-radius: 12px;
     padding: 25px;
@@ -3028,61 +3069,6 @@ form[class*="login"] h3 {
 @media (max-width: 768px) {
     .custom-login-container {
         margin: 20px 15px;
-        border-radius: 16px;
-        max-width: none;
-    }
-    
-    .login-header-section {
-        padding: 40px 30px 25px;
-    }
-    
-    .login-icon {
-        width: 70px;
-        height: 70px;
-        margin-bottom: 20px;
-    }
-    
-    .login-welcome {
-        font-size: 1.7rem;
-    }
-    
-    .custom-login-container .woocommerce-form-login {
-        padding: 30px 25px;
-    }
-    
-    .login-benefits {
-        padding: 25px 25px;
-    }
-    
-    .custom-login-container input[type="text"],
-    .custom-login-container input[type="email"],
-    .custom-login-container input[type="password"] {
-        padding: 16px 20px 16px 52px;
-        font-size: 16px; /* Prevents zoom on iOS */
-        border-radius: 14px;
-    }
-    
-    .custom-login-container .woocommerce-button {
-        padding: 18px 32px;
-        font-size: 16px;
-        border-radius: 14px;
-    }
-}
-
-@media (max-width: 480px) {
-    .custom-login-container {
-        margin: 15px 10px;
-        border-radius: 12px;
-    }
-    
-    .login-header-section {
-        padding: 30px 20px 20px;
-    }
-    
-    .login-welcome {
-        font-size: 1.5rem;
-    }
-    
     .login-subtitle {
         font-size: 13px;
     }

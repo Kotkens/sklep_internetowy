@@ -1,0 +1,76 @@
+/* Subtelne wycentrowanie checkoutu bez zmiany układu Woo
+   Uwaga: NIE stylujemy body (.woocommerce-checkout), tylko wnętrze treści,
+   aby nagłówek (pasek kategorii) i stopka pozostały na pełną szerokość. */
+/* Główny, bezpieczny kontener – trzyma checkout w środku strony */
+.preomar-checkout-container{
+  max-width:1000px;
+  margin-left:auto;
+  margin-right:auto;
+  padding-left:16px;
+  padding-right:16px
+}
+/* Wymuś domknięcie szerokości wewnątrz wrappera (nadpisuje wcześniejsze reguły) */
+body.woocommerce-checkout .preomar-checkout-container .woocommerce,
+body.woocommerce-checkout .preomar-checkout-container form.checkout{
+  max-width:1000px !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+  padding-left:12px;
+  padding-right:12px;
+  box-sizing:border-box
+}
+/* Zwęź lekko kolumnę podsumowania, by całość wyglądała bardziej centralnie */
+@media(min-width:992px){
+  .woocommerce-checkout #order_review{margin-left:12px;margin-right:12px}
+}
+
+/* Usuń "przyklejenie" podsumowania zamówienia – żadnego sticky na desktopie */
+.woocommerce-checkout #order_review{position:static !important; top:auto !important}
+/* WooCommerce Blocks (blokowy checkout) – wyłącz sticky sidebara/podsumowania */
+.woocommerce-checkout .wc-block-checkout__sidebar,
+.woocommerce-checkout .wp-block-woocommerce-checkout-order-summary-block{
+  position:static !important;
+  top:auto !important;
+}
+/* Dodatkowe klasy używane przez Woo Blocks dla bocznego podsumowania */
+.woocommerce-checkout .wc-block-components-sidebar-layout__sidebar,
+.woocommerce-checkout .wc-block-components-sidebar,
+.woocommerce-checkout .wc-block-components-sidebar-layout__content,
+.woocommerce-checkout .wc-block-components-order-summary,
+.woocommerce-checkout .wc-block-components-totals-wrapper{
+  position:static !important;
+  top:auto !important;
+}
+
+/* Mniejszy przycisk "Przeglądaj sklep" na pustym zamówieniu/koszyku (tylko checkout) */
+body.woocommerce-checkout .return-to-shop a.button,
+body.woocommerce-checkout a.button.wc-backward{
+  padding:10px 18px !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  border-radius:12px !important;
+  min-width:unset !important;
+}
+
+/* Woo Blocks: mniejszy przycisk w pustym checkout/carts (Gutenberg wp-block-button) */
+body.woocommerce-checkout .wc-block-checkout-empty .wp-block-button,
+body.woocommerce-checkout .wc-block-cart__empty .wp-block-button{
+  padding:0 !important;
+  background:transparent !important;
+  border-radius:8px !important;
+  display:inline-block !important;
+  height:auto !important; min-height:0 !important;
+}
+body.woocommerce-checkout .wc-block-checkout-empty .wp-block-button__link,
+body.woocommerce-checkout .wc-block-cart__empty .wp-block-button__link{
+  padding:10px 16px !important;
+  font-size:14px !important;
+  line-height:1.2 !important;
+  border-radius:8px !important;
+  display:inline-block !important;
+  width:auto !important; max-width:none !important;
+  height:auto !important; min-height:0 !important; max-height:48px !important;
+  white-space:nowrap !important;
+  align-items:center !important; justify-content:center !important;
+  background-color: var(--primary-color, #3a3a3c) !important;
+}
